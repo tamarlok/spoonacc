@@ -1,4 +1,5 @@
 # code works with R version 3.6.0 and 4.1.3
+rm(list=ls()) # clear workspace
 
 # libraries for data preparation:
 library(gdata)
@@ -31,6 +32,9 @@ library(sf)
 library(raster)
 library(dplyr)
 library(ggplot2)
+# to load and plot images:
+library(png)
+library(patchwork)
 
 # in case of different functions with the same name used in different packages, call the function as package::function 
 
@@ -63,7 +67,6 @@ save.image("data/tmp/Results.effect.sampling.frequency.RData")
 # comparing model performance when using the fixed versus flexible segmentation method, while downsampling standing data 4x in the training dataset
 source("2_analyses/6_comparing_fixed_vs_flexible_segmentation.R")
 save.image("data/tmp/Results.fixed.vs.flexible.segmentation.RData") 
-
 source("3_visualisation/2_plot_results_model_development.R")
 # best models use fixed-length segments of 0.4 s or flexible-length segments
 
@@ -71,9 +74,9 @@ source("3_visualisation/2_plot_results_model_development.R")
 source("1_data_preparation/3_load_and_process_application_data.R")
 source("2_analyses/7_apply_best_models_to_application_data.R")
 save.image("data/tmp/application.predicted.behaviour.0124.RData") 
-
 source("2_analyses/8_link_classified_acc_data_with_habitat.R")
 save.image("data/tmp/application.data.linked.to.habitat.RData")
+#load("data/tmp/application.data.linked.to.habitat.RData")
 source("2_analyses/9_statistical_analysis_of_prey_ingestion_rates.R")
 source("3_visualisation/3_comparing_results_fixed_flexible_segmentation_on_application_data.R") 
 source("3_visualisation/4_plot_spatial_distribution_of_foraging_habitats.R")

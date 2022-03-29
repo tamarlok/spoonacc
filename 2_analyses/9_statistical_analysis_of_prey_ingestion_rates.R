@@ -72,10 +72,10 @@ TableS3 <- table(for.suc.season$BirdID, for.suc.season$month, for.suc.season$yea
 TableS3 <- cbind(TableS3[,,1],TableS3[,,2],TableS3[,,3],TableS3[,,4])
 write.csv(TableS3, "output/TableS3.csv")
 
-################################ FIGURE 4 ######################################## 
+################################ FIGURE 5 ######################################## 
 ### Seasonal variation in prey ingestion rates using fixed segmentation method ###
 ##################################################################################
-pdf("output/Fig4.pdf",height=6,width=6)
+pdf("output/Fig5.pdf",height=6,width=6)
 #windows()
 par(mar=c(1,4,0,1), oma=c(2,0,1,0))
 layout(matrix(1:2,ncol=1))
@@ -96,4 +96,4 @@ axis(1, at=c(31+28+31+c(1,30+1,30+31+1,30+31+30+1,30+31+30+31+1,30+31+30+31+31+1
 mtext(expression("Prey ingestion rate ( "*min^-1*" )"),2,-1.5,cex=1.2,outer=T)
 legend("topright", legend=2016:2019, text.col=c("red","blue","green","orange"), bty="n")
 dev.off()
-############################### END FIGURE 4 ####################################
+############################### END FIGURE 5 ####################################
