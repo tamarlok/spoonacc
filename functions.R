@@ -420,17 +420,17 @@ plot.statistic.nsim.behaviour.x <- function(x, xadj=0, colour="grey") { # plot r
   points(1:length(behaviour.pooled)+xadj, apply(x,2,mean), pch=21, bg=colour, cex=2)
 }
 
-plot.statistic.nsim.behaviour.symbol <- function(x, xlabel="Segment length", statistic="Sensitivity", x.numeric=T, plot.x=T, plot.y=T, xlas=1, xline=3, legend=F) { # x is an array with the first dimension being the behaviour, the 2nd what should be on the x-axis (segment length or ARL value), and the 3rd being the mean, lcl and ucl
-  x <- x[behaviour.labels.ordered,,] # order behaviours for plotting
+plot.statistic.nsim.behaviour.symbol <- function(x, xlabel="Segment length", statistic="Sensitivity", behaviours = behaviour.labels.ordered, colors=behaviour.colors, x.numeric=T, plot.x=T, plot.y=T, xlas=1, xline=3, legend=F) { # x is an array with the first dimension being the behaviour, the 2nd what should be on the x-axis (segment length or ARL value), and the 3rd being the mean, lcl and ucl
+  x <- x[behaviours,,] # order behaviours for plotting
   if (x.numeric==T) xrange <- as.numeric(dimnames(x)[[2]]) else xrange <- 1:dim(x)[2]
   plot(xrange, x[1,,"mean"], xlim=c(min(xrange)-0.2*(max(xrange)-min(xrange))/length(xrange), max(xrange)+0.2*(max(xrange)-min(xrange))/length(xrange)), ylim=c(0,1), xaxt="n", yaxt="n", pch=19, type="n", xlab="", ylab="", las=1)
   for (i in 1:dim(x)[1]) {
-    lines(xrange-(5-i)*0.05, x[i,,"mean"], col=behaviour.colors[i])
-    arrows(xrange-(5-i)*0.05, x[i,,"mean"], y1=x[i,,"lcl"], length=0, col=behaviour.colors[i])
-    arrows(xrange-(5-i)*0.05, x[i,,"mean"], y1=x[i,,"ucl"], length=0, col=behaviour.colors[i])
+    lines(xrange-(5-i)*0.05, x[i,,"mean"], col=colors[i])
+    arrows(xrange-(5-i)*0.05, x[i,,"mean"], y1=x[i,,"lcl"], length=0, col=colors[i])
+    arrows(xrange-(5-i)*0.05, x[i,,"mean"], y1=x[i,,"ucl"], length=0, col=colors[i])
   }
-  for (i in 1:dim(x)[1]) points(xrange-(5-i)*0.05, x[i,,"mean"], pch=point.type[i], bg="white", cex=1.3, col=behaviour.colors[i]) # plot the points after the lines, so that lines are not plotted over the points
-  if (legend==T) legend("bottomright", legend=behaviour.labels.ordered, pch=point.type, col=behaviour.colors)
+  for (i in 1:dim(x)[1]) points(xrange-(5-i)*0.05, x[i,,"mean"], pch=point.type[i], bg="white", cex=1.3, col=colors[i]) # plot the points after the lines, so that lines are not plotted over the points
+  if (legend==T) legend("bottomright", legend=behaviour.labels.ordered, pch=point.type, col=colors)
   if (plot.x==T) {
     if (x.numeric==T) axis(1, at=xrange, las=xlas) else axis(1, at=xrange, labels=dimnames(x)[[2]], las=xlas)
     mtext(xlabel, 1, xline, xpd=T) 
@@ -487,17 +487,32 @@ calculate.mean.95CI.from.logits <- function(df) {
   df$freq <- 1
   for.suc.min <- min(df$for.suc[df$for.suc>0])
   for.suc.max <- min(df$for.suc[df$for.suc<1])
-  df$for.suc.for.logit <- df$for.suc
-  df$for.suc.for.logit[df$for.suc==0] <- for.suc.min
-  df$for.suc.for.logit[df$for.suc==1] <- for.suc.max
+  df$for.suc.for.logit <- qlogis(df$for.suc)
+  df$for.suc.for.logit[df$for.suc==0] <- qlogis(for.suc.min)
+  df$for.suc.for.logit[df$for.suc==1] <- qlogis(for.suc.max)
   df.mean.sd <- ddply(df, .(yday), summarize, 
-                      N = sum(freq), for.suc.mean.logit = mean(qlogis(for.suc.for.logit)), for.suc.logit.sd = sd(qlogis(for.suc.for.logit)))
+                      N = sum(freq), for.suc.mean.logit = mean(for.suc.for.logit), for.suc.logit.sd = sd(for.suc.for.logit))
   df.mean.sd$se.logit <- df.mean.sd$for.suc.logit.sd/sqrt(df.mean.sd$N)
   df.mean.sd$li.logit <- df.mean.sd$for.suc.mean.logit - 1.96*df.mean.sd$se.logit # is the same as liw when calculated on the probability scale
   df.mean.sd$ui.logit <- df.mean.sd$for.suc.mean.logit + 1.96*df.mean.sd$se.logit # is the same as liw when calculated on the probability scale
   df.mean.sd$mean <- plogis(df.mean.sd$for.suc.mean.logit)
   df.mean.sd$li <- plogis(df.mean.sd$li.logit)
   df.mean.sd$ui <- plogis(df.mean.sd$ui.logit)
+  df.mean.sd
+}
+
+calculate.mean.95CI.from.log <- function(df) {
+  df$freq <- 1
+  ingest.rate.min <- min(df$ingest.rate[df$ingest.rate>0])
+  df$log.ingest.rate <- log(df$ingest.rate+ingest.rate.min)
+  df.mean.sd <- ddply(df, .(yday), summarize, 
+                      N = sum(freq), log.ingest.rate.mean = mean(log.ingest.rate), log.ingest.rate.sd = sd(log.ingest.rate))
+  df.mean.sd$se.log <- df.mean.sd$log.ingest.rate.sd/sqrt(df.mean.sd$N)
+  df.mean.sd$li.log <- df.mean.sd$log.ingest.rate.mean - 1.96*df.mean.sd$se.log 
+  df.mean.sd$ui.log <- df.mean.sd$log.ingest.rate.mean + 1.96*df.mean.sd$se.log 
+  df.mean.sd$mean <- exp(df.mean.sd$log.ingest.rate.mean)
+  df.mean.sd$li <- exp(df.mean.sd$li.log)
+  df.mean.sd$ui <- exp(df.mean.sd$ui.log)
   df.mean.sd
 }
 

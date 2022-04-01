@@ -7,7 +7,6 @@ point.type <- c(24,25,23,22,24,21,25,21,22)
 behaviour.colors <- brewer.pal(length(behaviour.labels.ordered), "Paired")
 # switch colors for search (orange), handle (pink) and intake (red):
 behaviour.colors <- behaviour.colors[c(1:4,7,5,6,8:9)]
-display.brewer.pal(length(behaviour.labels.ordered), "Paired")
 
 # Effect of maximum segment length (only a single round/simulation of model training and validation)
 F.flexible.ARL.maxlength <- calculate.F.measure(sensitivity.flexible.ARL.maxlength, precision.flexible.ARL.maxlength)
@@ -123,36 +122,27 @@ F.measure.pooled.behaviours.sampling.freq <- calculate.F.measure(sensitivity.poo
 mean.CRI.F.measure.pooled.behaviours.sampling.freq <- calculate.mean.CRI(F.measure.pooled.behaviours.sampling.freq)
 
 ################
-### FIGURE S5 ###
+### FIGURE S9 ###
 ################
-windows() # adjust manually to larger vertical size on large screen... 
-layout(matrix(1:3, ncol=1, byrow=T))
-par(mar=c(1,1,0,0), oma=c(5,5,1,10), xpd=T)
+pdf("output/FigS9.pdf", width=4, height=6)
+#windows(4,6) 
+layout(matrix(1:3, ncol=1, byrow=F))
+par(mar=c(1,1,0,10), oma=c(5,5,1,0), xpd=T)
 plot.statistic.nsim.behaviour.symbol(mean.CRI.sensitivity.sampling.freq, xlabel="", statistic="Sensitivity", plot.x=F, x.numeric=F)
 plot.statistic.nsim.behaviour.symbol(mean.CRI.precision.sampling.freq, xlabel="", statistic="Precision", plot.x=F, x.numeric=F)
 plot.statistic.nsim.behaviour.symbol(mean.CRI.F.measure.sampling.freq, xlabel="Sampling frequency", statistic="F-measure", x.numeric=F)
-legend("bottomright", inset=c(-0.3,0), legend=behaviour.labels.ordered, pch=point.type, xpd=NA, col=behaviour.colors)
-### END FIGURE S5 ###
+legend("bottomright", inset=c(-0.6,0), legend=behaviour.labels.ordered, pch=point.type, xpd=NA, col=behaviour.colors)
+dev.off()
+### End Figure S9 ###
 
-### Figure when behaviour is pooled into 4 broad-scale categories... ### 
-windows() # adjust manually to larger vertical size on large screen... 
-layout(matrix(1:3, ncol=1, byrow=T))
-par(mar=c(1,1,0,0), oma=c(5,5,1,10), xpd=T)
-plot.statistic.nsim.behaviour.symbol(mean.CRI.sensitivity.pooled.behaviours.sampling.freq, xlabel="", statistic="Sensitivity", plot.x=F, x.numeric=F, colors=behaviour.colors[2:5])
-plot.statistic.nsim.behaviour.symbol(mean.CRI.precision.pooled.behaviours.sampling.freq, xlabel="", statistic="Precision", plot.x=F, x.numeric=F, colors=behaviour.colors[2:5])
-plot.statistic.nsim.behaviour.symbol(mean.CRI.F.measure.pooled.behaviours.sampling.freq, xlabel="Sampling frequency", statistic="F-measure", x.numeric=F, colors=behaviour.colors[2:5])
-legend("bottomright", inset=c(-0.4,0), legend=dimnames(mean.CRI.sensitivity.pooled.behaviours.sampling.freq)[[1]], pch=point.type, xpd=NA, col=behaviour.colors[2:5])
+### graph with broad-scale behavours ###
+behaviours.broad <- dimnames(mean.CRI.sensitivity.pooled.behaviours.sampling.freq)[[1]]
+plot.statistic.nsim.behaviour.symbol(mean.CRI.sensitivity.pooled.behaviours.sampling.freq, xlabel="", statistic="", plot.x=F, x.numeric=F, behaviours=behaviours.broad, colors=behaviour.colors[c(3,4,8,2)])
+plot.statistic.nsim.behaviour.symbol(mean.CRI.precision.pooled.behaviours.sampling.freq, xlabel="", statistic="", plot.x=F, x.numeric=F, behaviours=behaviours.broad, colors=behaviour.colors[c(3,4,8,2)])
+plot.statistic.nsim.behaviour.symbol(mean.CRI.F.measure.pooled.behaviours.sampling.freq, xlabel="Sampling frequency", statistic="", x.numeric=F, behaviours=behaviours.broad, colors=behaviour.colors[c(3,4,8,2)])
+legend("bottomright", inset=c(-0.8,0), legend=behaviours.broad, pch=point.type, xpd=NA, col=behaviour.colors[c(3,4,8,2)])
 
-mean.CRI.sensitivity.pooled.behaviours.sampling.freq[1,,]
-as.data.frame(aperm(mean.CRI.sensitivity.pooled.behaviours.sampling.freq, c(3,2,1)))
-
-mean.CRI.sensitivity.pooled.behaviours.sampling.freq.matrix <- round(apply(mean.CRI.sensitivity.pooled.behaviours.sampling.freq, 3L, c),2)
-column.sampling.freqs <- rep(dimnames(mean.CRI.sensitivity.pooled.behaviours.sampling.freq)[[2]], each=dim(mean.CRI.sensitivity.pooled.behaviours.sampling.freq)[1])
-column.behaviours <- rep(dimnames(mean.CRI.sensitivity.pooled.behaviours.sampling.freq)[[1]], times=dim(mean.CRI.sensitivity.pooled.behaviours.sampling.freq)[2])
-
-write.table(cbind(column.sampling.freqs, column.behaviours, paste(mean.CRI.sensitivity.pooled.behaviours.sampling.freq.matrix[,1]," (",mean.CRI.sensitivity.pooled.behaviours.sampling.freq.matrix[,2],"-",mean.CRI.sensitivity.pooled.behaviours.sampling.freq.matrix[,3],")",sep="")), "clipboard", sep="\t")
-
-# comparison of model perforamnce using fixed versus flexible segmentation method 
+# comparison of model performance using fixed versus flexible segmentation method 
 
 ### calculate mean, lcl and ucl over 100 simulations
 mean.CRI.sensitivity.fixed.seglength <- calculate.mean.CRI(sensitivity.fixed.seglength.nsim)
