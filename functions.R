@@ -112,11 +112,13 @@ create.fixed.segments <- function(segment.length, acc = acc.annotated, remove.sh
   
   samples.per.segment <- ceiling(segment.length * sampling.freq) # to make it an integer (and select only segments with highest possible number of samples, given the sampling frequency; e.g. for a segment of 0.8 seconds at 2 Hz, this is 2 samples)
   
-  # 20220117: check whether indices start at 0 or 1 
-  #min.index.per.sample <- aggregate(Index~Date+Time+BirdID, acc, min) # the column Time does not exist in the non-annotated data, so gives an error when applied to these data.
-  #table(min.index.per.sample$Index) # we could start these samples all at 0 by substracting the min index, but this is not yet implemented.
+  ## Renumber column Index so that each obs.id starts with Index=0
+  index.min.obs.id <- aggregate(Index~obs.id, acc, min)
+  names(index.min.obs.id)[2]<-"Index.start"
+  acc <- merge(acc, index.min.obs.id)
+  acc$Index <- acc$Index-acc$Index.start
   
-  # 20210617: these two lines are added to include the adjustment of the original sampling frequency (which was 20 Hz) within the creation of fixed segments code:
+  # selection of indices that should be used when sampling.freq is lower than 20 Hz (if sampling.freq=20, all indices will be used): 
   indices.to.use <- seq(min(acc$Index),max(acc$Index),by=20/sampling.freq)
   acc.sel = acc[acc$Index %in% indices.to.use,] 
 
@@ -151,8 +153,7 @@ create.fixed.segments <- function(segment.length, acc = acc.annotated, remove.sh
 ## Function to create dataframe with flexible segments ##
 #########################################################
 
-## check whether this works with downsampling the sampling frequency (see above for fixed segment lengths)
-create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, sampling.freq=20, max.segment.length=1.6, segmentation.script = "new", startup=1, annotated.data=T, naomit=T) {
+create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, max.segment.length=1.6, segmentation.script = "new", startup=1, annotated.data=T, naomit=T) {
   
   ### START creation flexible segments ###
   
@@ -181,7 +182,7 @@ create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, sampling.fr
     
     dcpb <- processStream(temp.acc$x, "GLR", ARL0=ARL0, startup=startup)   
     
-    incl <- dcpb$changePoints[c(1,which(diff(dcpb$changePoints)>2)+1)] # after selecting the first changepoint, only select subsequent changepoints that are more than 2 acc-samples further from the previous changepoint (i.e. causing the minimum segment length to become 3 samples); Bom et al. 2014 used a min sample size of 4 here. If breakpoints are estimated at position 3, 5 and 7 for example, only 3 is used.  
+    incl <- dcpb$changePoints[c(1,which(diff(dcpb$changePoints)>2)+1)] # after selecting the first changepoint, only select subsequent changepoints that are more than 2 acc-samples further from the previous changepoint (i.e. causing the minimum segment length to become 3 samples, i.e. 0.15 seconds with 20 Hz data); If breakpoints are estimated at position 3, 5 and 7 for example, only 3 is selected. Bom et al. 2014 used a min. sample size of 4.   
     
     if (is.na(max(incl))==F) # only run the below line when there is at least one change point, otherwise use the original (and entire) segment.id.cut. 
         acc$segment.id.cut[which(acc$obs.id.cut == un.obs.cut[k])] <- paste(temp.acc$obs.id.cut, letters[rep(c(1:(length(incl)+1)), c(diff(c(0, incl, nrow(temp.acc)))))], sep = ".")
@@ -233,7 +234,7 @@ create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, sampling.fr
 }  
 
 assign.behaviour.to.segments <- function(seg.df, acc) {
-    # match most occurring behaviour during a segment with seg.df data frame (this is different from Roeland's code)
+    # match most occurring behaviour during a segment with seg.df data frame:
     acc$freq <- 1
     segment.id.cut.behaviours <- aggregate(freq~segment.id.cut+behaviour.pooled, acc, sum)
     segment.id.cut.nobsmax <- aggregate(freq~segment.id.cut, segment.id.cut.behaviours, max) # the number of points that the longest expressed behaviour is expressed
@@ -269,6 +270,51 @@ RF.model <- function(seg.df, acc, selected.variables = predictors.all, clean.seg
   ind <- sample(1:2, nrow(seg.df), replace = TRUE, prob=c(0.7, 0.3)) # divide data into 70% training (ind=1) and 30% testing (ind=2) data 
   data.train <- seg.df[ind == 1,] # the training dataset
   data.test <- seg.df[ind ==2,] # the testing dataset
+  
+  # perform up- and downsampling on the train dataset only, to be able to properly interpret the effects on sensitivity and precision for the test dataset
+  data.train <- downsampling.behaviours(data.train, stand=stand, search=search)
+  data.train <- upsampling.behaviours(data.train, drink=drink, handle=handle, ingest=ingest, walk=walk, soar=soar)
+  data.train$behaviour.pooled <-  factor(data.train$behaviour.pooled) 
+  if (clean.segments.train == T) data.train <- data.train[data.train$single.behaviour==1,]
+  if (clean.segments.test == T) data.test <- data.test[data.test$single.behaviour==1,]
+  
+  # remove the predictor variables from selected.variables that contained all NA in seg.df (e.g. noise when there are only 2 samples per segment, at 2 Hz)
+  selected.variables <- selected.variables[selected.variables%in%names(seg.df)]
+  data.train <- data.train[,c("behaviour.pooled", selected.variables)]
+  
+  # fit the model on the train dataset
+  fit.RF <- randomForest(behaviour.pooled ~ ., data = data.train, importance=T)
+  behav.pred <- predict(fit.RF, data.test) # do the prediction on a random selection of the dataset (the testing/validation dataset)
+  df.pred <- cbind(data.test, behav.pred)
+  acc.pred  <- merge(acc, df.pred[,c("segment.id.cut","behav.pred")])
+  mytable <- table(predicted = acc.pred$behav.pred, observed = acc.pred$behaviour.pooled)
+  mytable <- mytable[, match(rownames(mytable), colnames(mytable))]
+  list(fit.RF, mytable, df.pred)
+}
+
+RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, soar=1) {
+  seg.df <- downsampling.behaviours(seg.df, stand=stand, search=search)
+  seg.df <- upsampling.behaviours(seg.df, drink=drink, handle=handle, ingest=ingest, walk=walk, soar=soar)
+  seg.df$behaviour.pooled <-  factor(seg.df$behaviour.pooled)
+  # fit the model on the train dataset
+  fit.RF <- randomForest(behaviour.pooled ~ mean.x + mean.y + mean.z + 
+                           min.x + min.y + min.z + max.x + max.y + max.z + 
+                           trend.x + trend.y + trend.z + odba.x + odba.y + odba.z + odba + 
+                           dps.x + dps.y + dps.z + fdps.x + fdps.y + fdps.z + 
+                           kurt.x + kurt.y + kurt.z + skew.x + skew.y + skew.z +
+                           noise.x + noise.y + noise.z + 
+                           speed_2d, 
+                         data = seg.df, importance=T)
+  fit.RF
+}
+
+RF.model.diff.ind <- function(seg.df, acc, train.ind = c(760,763), test.ind = 1608, selected.variables = predictors.all, clean.segments.train = FALSE, clean.segments.test = FALSE, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, soar=1) {
+  # in the segmentation function, there is an option to remove all rows which contain at least 1 predictor with NA. If this has NOT been done, we here remove the predictors that contain all NA's (because they can't be calculated over 1 or 2 points), and then remove the remaining rows that still have some NA's for other predictors. 
+  seg.df <- seg.df[,apply(!is.na(seg.df), 2, any)]
+  seg.df <- na.omit(seg.df)
+  
+  data.train <- seg.df[seg.df$BirdID %in% train.ind,] # the training dataset
+  data.test <- seg.df[seg.df$BirdID %in% test.ind,] # the testing dataset
   
   # perform up- and downsampling on the train dataset only, to be able to properly interpret the effects on sensitivity and precision for the test dataset
   data.train <- downsampling.behaviours(data.train, stand=stand, search=search)
@@ -360,9 +406,9 @@ calculate.performance.pooled.behaviours <- function(RF.model.results) {
   
   cM <- confusionMatrix(as.table(RF.model.results))
   names(cM)
-  sensitivity <- cM$byClass[,"Sensitivity"] # 
+  sensitivity <- cM$byClass[,"Sensitivity"]
   specificity <- cM$byClass[,"Specificity"] # or recall
-  precision <- cM$byClass[,"Pos Pred Value"] # or precision
+  precision <- cM$byClass[,"Pos Pred Value"]
   accuracy.overall <- sum(diag(RF.model.results))/sum(RF.model.results) # this is the "global" accuracy = (TP+TN)/(TP+FP+FN+TN)
   list(sensitivity, specificity, precision, accuracy.overall)
 }
@@ -402,7 +448,7 @@ plot.statistic.single <- function(x, xlabel="Segment length", statistic="Sensiti
   x <- x[behaviour.labels.ordered,] # order behaviours for plotting
   plot(c(min(xrange),max(xrange)), c(0,1), type="n", xlab="", ylab="", cex.lab=1.5, xaxt="n", yaxt="n")
   for (i in 1:dim(x)[1]) lines(xrange, x[i,], col=behaviour.colors[i])
-  for (i in 1:dim(x)[1]) points(xrange, x[i,], pch=point.type[behaviour.labels==rownames(x)[i]], col=behaviour.colors[i], bg="white") # plot points after lines to avoid lines to cross over points
+  for (i in 1:dim(x)[1]) points(xrange, x[i,], pch=point.type[i], col=behaviour.colors[i], bg="white") # plot points after lines to avoid lines to cross over points
   if (legend==T) legend("bottomright", legend=behaviour.labels, pch=point.type)
   if (plot.x==T) {
     axis(1, at=xrange)
@@ -493,8 +539,8 @@ calculate.mean.95CI.from.logits <- function(df) {
   df.mean.sd <- ddply(df, .(yday), summarize, 
                       N = sum(freq), for.suc.mean.logit = mean(for.suc.for.logit), for.suc.logit.sd = sd(for.suc.for.logit))
   df.mean.sd$se.logit <- df.mean.sd$for.suc.logit.sd/sqrt(df.mean.sd$N)
-  df.mean.sd$li.logit <- df.mean.sd$for.suc.mean.logit - 1.96*df.mean.sd$se.logit # is the same as liw when calculated on the probability scale
-  df.mean.sd$ui.logit <- df.mean.sd$for.suc.mean.logit + 1.96*df.mean.sd$se.logit # is the same as liw when calculated on the probability scale
+  df.mean.sd$li.logit <- df.mean.sd$for.suc.mean.logit - 1.96*df.mean.sd$se.logit 
+  df.mean.sd$ui.logit <- df.mean.sd$for.suc.mean.logit + 1.96*df.mean.sd$se.logit 
   df.mean.sd$mean <- plogis(df.mean.sd$for.suc.mean.logit)
   df.mean.sd$li <- plogis(df.mean.sd$li.logit)
   df.mean.sd$ui <- plogis(df.mean.sd$ui.logit)
@@ -520,7 +566,7 @@ add.columns.to.application.data <- function(df) {
   # link df with predicted behaviours per segment to df with habitat per date_time/BirdID
   df <- merge(df[df$latitude>53,c(names(df)[1:8],"pred.behav","mean.x","min.x","max.x","odba.x","odba.z","odba","dps.x","fdps.x","max.z")], df.uni.53[,c("BirdID","date_time","Name","habitat")], by=c("BirdID","date_time"))
   
-  # remove 763 from the data:
+  # remove 763 from the data as tracker was malfunctioning:
   df <- df[df$BirdID!="763_2016",]
   
   # define foraging and ingesting prey

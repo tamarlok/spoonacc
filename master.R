@@ -6,7 +6,7 @@ library(gdata)
 library(rpart)
 library(lubridate)
 library(gplots)
-# additional libraries for data analysis:
+# additional libraries for data analysis and plotting:
 library(reshape)
 library(reshape2)
 library(cpm)
@@ -23,7 +23,11 @@ library(lme4)
 library(nlme)
 library(MuMIn)
 library(mgcv)
+library(gamm4)
 library(plotrix)
+library(ggplot2)
+library(gganimate)
+library(av)
 # library for plotting (data on) maps:
 library(OpenStreetMap)
 library(osmdata)
@@ -31,7 +35,6 @@ library(tidyverse)
 library(sf)
 library(raster)
 library(dplyr)
-library(ggplot2)
 # to load and plot images:
 library(png)
 library(patchwork)
@@ -43,7 +46,7 @@ Sys.setenv(TZ="GMT")
 ###
 
 source("functions.R")
-set.seed(3) # to be able to reproduce random processes (though the order of running the different codes should then be exactly the same)
+set.seed(3) # to be able to reproduce random processes
 
 # data preparation and visualization
 source("1_data_preparation/1_visually_check_and_select_soaring_flight_data.R")
@@ -65,9 +68,10 @@ save.image("data/tmp/Results.effect.sampling.frequency.RData")
 
 # comparing model performance when using the fixed versus flexible segmentation method, while downsampling standing data 4x in the training dataset
 source("2_analyses/6_comparing_fixed_vs_flexible_segmentation.R")
-save.image("data/tmp/Results.fixed.vs.flexible.segmentation.RData") 
+save.image("data/tmp/Results.fixed.vs.flexible.segmentation.0913.RData")
+
 source("3_visualisation/2_plot_results_model_development.R")
-# best models use fixed-length segments of 0.4 s or flexible-length segments
+# best models use fixed-length segments of 0.4 s or variable-length segments
 
 # apply the best models to application data (of adult females during the breeding season of 2016-2019)
 source("1_data_preparation/3_load_and_process_application_data.R")

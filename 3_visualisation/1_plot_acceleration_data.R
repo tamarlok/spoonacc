@@ -129,3 +129,44 @@ mtext("Time (s)", 1, 1.5, outer=T)
 mtext("G-force", 2, 1.5, outer=T)
 dev.off()
 ### END FIGURE 2 ###
+
+
+# Make animated graph for plotting along with video footage of foraging spoonbill
+# the sample at Time 12:12:05 is suitable and has good quality video footage as well.  
+acc.annotated.760.sel <- acc.annotated.760[acc.annotated.760$Time=='12:12:05',]
+# combine the three axis into one column
+gg.ann.acc.x <- acc.annotated.760.sel[,c('BirdID','segment.id','date.time.acc','x','behaviour.pooled')]
+names(gg.ann.acc.x)[4]='value'
+gg.ann.acc.x$axis='x'
+gg.ann.acc.y <- acc.annotated.760.sel[,c('BirdID','segment.id','date.time.acc','y','behaviour.pooled')]
+names(gg.ann.acc.y)[4]='value'
+gg.ann.acc.y$axis='y'
+gg.ann.acc.z <- acc.annotated.760.sel[,c('BirdID','segment.id','date.time.acc','z','behaviour.pooled')]
+names(gg.ann.acc.z)[4]='value'
+gg.ann.acc.z$axis='z'
+gg.ann.acc <- rbind(gg.ann.acc.x, gg.ann.acc.y, gg.ann.acc.z)
+
+# make searching and ingesting different shades of grey in the background
+acc.annotated.760.sel$behaviour.pooled
+acc.annotated.760.sel$behavioural.switch = 0
+for (i in 2:length(acc.annotated.760.sel$behavioural.switch)) if(acc.annotated.760.sel$behaviour.pooled[i-1]!=acc.annotated.760.sel$behaviour.pooled[i]) acc.annotated.760.sel$behavioural.switch[i] = 1
+# select the behavioural switches:
+acc.annotated.760.behav.switch <- acc.annotated.760.sel[acc.annotated.760.sel$behavioural.switch==1,]
+# make rectangles for searching (light grey) and ingestion (dark grey)
+rects.behaviour <- data.frame(xstart = c(min(acc.annotated.760.sel$date.time.acc),acc.annotated.760.behav.switch$date.time.acc), xend = c(acc.annotated.760.behav.switch$date.time.acc, max(acc.annotated.760.sel$date.time.acc)), col = c('search','ingest','search','ingest','search'))
+
+basic.graph.bg <- ggplot() +
+  geom_rect(data = rects.behaviour, aes(xmin = xstart, xmax = xend, ymin = -Inf, ymax = Inf, fill = col), alpha = 0.4) +
+  geom_line(data = gg.ann.acc, aes(x=date.time.acc, y=value, group=axis, color=axis)) +
+  scale_color_manual(values=c('red','blue','green')) +
+  scale_fill_manual(values=c('grey20','grey80','grey20','grey80','grey20')) +
+  scale_x_continuous(expand = c(0, 0)) +   
+  scale_y_continuous(expand = c(0, 0))
+
+animated.bg.graph <- basic.graph.bg + 
+  transition_reveal(date.time.acc)
+
+animate(animated.bg.graph, duration=10, fps=30, renderer = av_renderer(), width=800, height=200)
+anim_save("output/acc.data.animated.mp4")
+# then open this mp4-file in the Video Editor of Windows11 and save it as mp4 to have the correct codec to import it into Davinci Resolve to combine it with the associated video footage.
+

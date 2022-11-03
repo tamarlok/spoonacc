@@ -53,6 +53,19 @@ model.yr.rnd.int <- lme(log.ingest.rate~yearf, ingest.rate.season, random=~1|Bir
 model.c.rnd.int <- lme(log.ingest.rate~1, ingest.rate.season, random=~1|BirdID, method="ML")
 ingest.rate.season$predict.ydaysqxyr.pop <- exp(predict(model.seasonxyr.rnd.slopes, level=0))
 ingest.rate.season$predict.ydaysq.pop <- exp(predict(model.season.rnd.slopes, level=0))
+
+# run additive models to allow the seasonal effect to be estimated by a smoother:
+model.seasongam <- gam(log.ingest.rate~s(ydayz), data=ingest.rate.season, method="ML")
+windows()
+plot(model.seasongam)
+summary(model.seasongam)
+model.seasongamm4.rnd.int <- gamm4(log.ingest.rate~s(ydayz), random=~(1|BirdID), data=ingest.rate.season, REML=F)
+plot(model.seasongamm4.rnd.int$gam)
+model.seasongamm.rnd.int <- gamm(log.ingest.rate~s(ydayz), random=list(BirdID=~1), data=ingest.rate.season, method="ML")
+plot(model.seasongamm.rnd.int$gam)
+anova(model.seasongamm4.rnd.int$gam)
+, model.seasongamm.rnd.int$gam)
+
 Table2 <- AICc(model.seasonxyr.rnd.slopes, model.season.rnd.slopes, model.season.yr.rnd.slopes, model.yr.rnd.int, model.c.rnd.int)
 Table2$dAICc <- Table2$AICc-min(Table2$AICc)
 Table2$expmin0.5dAICc <- exp(-0.5*Table2$dAICc)

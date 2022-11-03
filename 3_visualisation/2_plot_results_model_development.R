@@ -3,24 +3,39 @@
 behaviour.pooled <- c("sit", "stand", "fly-flap", "fly-soar", "for-search", "for-handle", "for-intake", "walk", "drink")
 behaviour.labels.ordered <- c("sit", "stand", "fly-flap", "fly-soar", "forage-search", "forage-handle", "forage-intake", "walk", "drink")
 behaviour.labels.ordered.short <- c("sit", "stand", "fly (active)", "fly (passive)", "search", "handle", "ingest", "walk", "drink")
-point.type <- c(24,25,23,22,24,21,25,21,22) 
+point.type <- c(24,25,23,22,24,23,25,21,22) 
 behaviour.colors <- brewer.pal(length(behaviour.labels.ordered), "Paired")
 # switch colors for search (orange), handle (pink) and intake (red):
 behaviour.colors <- behaviour.colors[c(1:4,7,5,6,8:9)]
+
+# distribution of segment length of the first flexiby-cut segment within the 1.6 s samples, showing that these segments can be as small as 3 observations:
+windows()
+hist(dfs.flex.100[[1]][substr(dfs.flex.100[[1]]$segment.id.cut,nchar(dfs.flex.100[[1]]$segment.id.cut),nchar(dfs.flex.100[[1]]$segment.id.cut))=="a",'nobs.segments'], main="", xlab="# observations in first flexibly cut segment")
+# plotting the distribution of all flexibly cut segments:
+hist(dfs.flex.100[[1]]$nobs.segments, main="", xlab="# observations of all flexibly cut segments")
+
+# plot the distribution of segment lengths for the different ARL values. 
+windows()
+layout(matrix(1:8,ncol=2))
+# j is the index for the different ARL values
+hist(df1.ARL.values[[j]][substr(df1.ARL.values[[j]]$segment.id.cut,nchar(dfs.flex.100[[1]]$segment.id.cut),nchar(dfs.flex.100[[1]]$segment.id.cut))=="a",'nobs.segments'], main="", xlab="# observations in first flexibly cut segment")
+# plotting the distribution of all flexibly cut segments:
+hist(dfs.flex.100[[1]]$nobs.segments, main="", xlab="# observations of all flexibly cut segments")
+
 
 # Effect of maximum segment length (only a single round/simulation of model training and validation)
 F.flexible.ARL.maxlength <- calculate.F.measure(sensitivity.flexible.ARL.maxlength, precision.flexible.ARL.maxlength)
 windows(10,10)
 layout(matrix(1:6, ncol=2, byrow=F))
 par(mar=c(1,1,0,0), oma=c(5,5,3,8), xpd=T)
-plot.statistic.single(sensitivity.flexible.ARL.maxlength[1,,], xlab="", statistic="Sensitivity", plot.x=F)
+plot.statistic.single(sensitivity.flexible.ARL.maxlength[1,behaviour.labels.ordered,], xlab="", statistic="Sensitivity", plot.x=F)
 mtext("ARL=500",3,1,xpd=T)
-plot.statistic.single(precision.flexible.ARL.maxlength[1,,], xlab="", statistic="Precision", plot.x=F)
-plot.statistic.single(F.flexible.ARL.maxlength[1,,], xlab="Maximum segment length", statistic="F-measure")
-plot.statistic.single(sensitivity.flexible.ARL.maxlength[2,,], xlab="", statistic="Sensitivity", plot.x=F, plot.y=F)
+plot.statistic.single(precision.flexible.ARL.maxlength[1,behaviour.labels.ordered,], xlab="", statistic="Precision", plot.x=F)
+plot.statistic.single(F.flexible.ARL.maxlength[1,behaviour.labels.ordered,], xlab="Maximum segment length", statistic="F-measure")
+plot.statistic.single(sensitivity.flexible.ARL.maxlength[2,behaviour.labels.ordered,], xlab="", statistic="Sensitivity", plot.x=F, plot.y=F)
 mtext("ARL=5000",3,1,xpd=T)
-plot.statistic.single(precision.flexible.ARL.maxlength[2,,], xlab="", statistic="Precision", plot.x=F, plot.y=F)
-plot.statistic.single(F.flexible.ARL.maxlength[2,,], xlab="Maximum segment length", statistic="F-measure", plot.y=F)
+plot.statistic.single(precision.flexible.ARL.maxlength[2,behaviour.labels.ordered,], xlab="", statistic="Precision", plot.x=F, plot.y=F)
+plot.statistic.single(F.flexible.ARL.maxlength[2,behaviour.labels.ordered,], xlab="Maximum segment length", statistic="F-measure", plot.y=F)
 legend("bottomright", inset=c(-0.45,0), legend=behaviour.labels.ordered.short, pch=point.type, xpd=NA, col=behaviour.colors)
 
 # Effect startup value
@@ -32,12 +47,13 @@ plot.statistic.single(t(sensitivity.effect.startup.value), xlabel="", statistic=
 mtext("ARL=5000 and max seg length=1.6 s",3,1,xpd=T) # default ARL value used
 plot.statistic.single(t(precision.effect.startup.value), xlabel="", statistic="Precision", plot.x=F)
 plot.statistic.single(t(F.effect.startup.value), xlab="Startup value", statistic="F-measure")
-legend("bottomright", inset=c(-0.4,0), legend=behaviour.labels.ordered.short, pch=point.type, xpd=NA, col=behaviour.colors)
+legend("bottomright", inset=c(-0.45,0), legend=behaviour.labels.ordered.short, pch=point.type, xpd=NA, col=behaviour.colors)
 
 #################
-### FIGURE S3 ###
+### FIGURE S5 ###
 #################
-pdf("output/FigS3.pdf",width=9,height=6)
+pdf("output/FigS5.pdf",width=9,height=6)
+# windows(9,6)
 layout(1:3)
 par(mar=c(1,5,0,1), oma=c(2,0,13,0))
 # Sensitivity
@@ -76,7 +92,7 @@ plot.statistic.nsim.behaviour.x(calculate.F.measure(sensitivity.search2.walk10.i
 plot.statistic.nsim.behaviour.x(calculate.F.measure(sensitivity.stand4.search5.nsim[,behaviour.labels.ordered], precision.stand4.search5.nsim[,behaviour.labels.ordered]), colour="pink", xadj=0.6)
 axis(1, at=1:9+0.2, labels=behaviour.labels.ordered.short, las=1, cex.axis=1.4)
 dev.off()
-### END FIGURE S3 ###
+### END FIGURE S5 ###
 
 # compare the models stand4 and stand4.search5 and investigate with which behaviours search, ingest and walk are mostly confused. 
 # depending on whether searching behaviour is downsampled 5x or not (standing was downsampled 4x in both cases)
@@ -107,7 +123,9 @@ plot.CI.deviation.intakerate(deviation.intakerate.walk10.ingest6.nsim, at=4, col
 plot.CI.deviation.intakerate(deviation.intakerate.search2.walk10.ingest6.nsim, at=5, colour="lightcoral")
 axis(1, at=1:5, labels=c("none","search -5x","search -2x", "walk 10x, ingest 6x", "search -2x"))
 axis(1, at=1:5, line=1, labels=c("","","", "", "walk 10x, ingest 6x"), tick=F)
-# the deviation in prey ingestion rates is depending on the proportion of foraging (searching and ingesting) behaviour in the test dataset. This should ideally be closely matching the proportion expressed in the wild. # additionally, it is questionable whether we should aim for a value close to 1, or a value with the smallest SE (taking for granted a persistent over- or underestimation as relative comparisons are still possible). 
+# the deviation in prey ingestion rates is depending on the proportion of foraging (searching and ingesting) behaviour in the test dataset. This should ideally be closely matching the proportion expressed in the wild. 
+# additionally, it is questionable whether we should aim for a value close to 1, or a value with the smallest SE (taking for granted a persistent over- or underestimation as relative comparisons are still possible). 
+# for both aims, it is good to choose the "none" option, i.e. no down- or upsampling of search, ingest or walk.
 
 # investigate the effect of sampling frequency
 # calculate mean, lcl and ucl over 10 simulations for all separate behaviours
@@ -122,18 +140,18 @@ F.measure.pooled.behaviours.sampling.freq <- calculate.F.measure(sensitivity.poo
 mean.CRI.F.measure.pooled.behaviours.sampling.freq <- calculate.mean.CRI(F.measure.pooled.behaviours.sampling.freq)
 
 ################
-### FIGURE S9 ###
+### FIGURE S11 ###
 ################
-pdf("output/FigS9.pdf", width=4, height=6)
+pdf("output/FigS11.pdf", width=4, height=6)
 #windows(4,6) 
 layout(matrix(1:3, ncol=1, byrow=F))
 par(mar=c(1,1,0,10), oma=c(5,5,1,0), xpd=T)
 plot.statistic.nsim.behaviour.symbol(mean.CRI.sensitivity.sampling.freq, xlabel="", statistic="Sensitivity", plot.x=F, x.numeric=F)
 plot.statistic.nsim.behaviour.symbol(mean.CRI.precision.sampling.freq, xlabel="", statistic="Precision", plot.x=F, x.numeric=F)
 plot.statistic.nsim.behaviour.symbol(mean.CRI.F.measure.sampling.freq, xlabel="Sampling frequency", statistic="F-measure", x.numeric=F)
-legend("bottomright", inset=c(-0.6,0), legend=behaviour.labels.ordered, pch=point.type, xpd=NA, col=behaviour.colors)
+legend("bottomright", inset=c(-0.6,0), legend=behaviour.labels.ordered.short, pch=point.type, xpd=NA, col=behaviour.colors)
 dev.off()
-### End Figure S9 ###
+### End Figure S11 ###
 
 ### graph with broad-scale behavours ###
 behaviours.broad <- dimnames(mean.CRI.sensitivity.pooled.behaviours.sampling.freq)[[1]]
@@ -147,6 +165,7 @@ legend("bottomright", inset=c(-0.8,0), legend=behaviours.broad, pch=point.type, 
 ### calculate mean, lcl and ucl over 100 simulations
 mean.CRI.sensitivity.fixed.seglength <- calculate.mean.CRI(sensitivity.fixed.seglength.nsim)
 mean.CRI.precision.fixed.seglength <- calculate.mean.CRI(precision.fixed.seglength.nsim)
+mean.CRI.specificity.fixed.seglength <- calculate.mean.CRI(specificity.fixed.seglength.nsim)
 F.measure.fixed.seglength.nsim <- calculate.F.measure(sensitivity.fixed.seglength.nsim, precision.fixed.seglength.nsim)
 mean.CRI.Fmeasure.fixed.seglength <- calculate.mean.CRI(F.measure.fixed.seglength.nsim)
 mean.CRI.sensitivity.flexible.ARL <- calculate.mean.CRI(sensitivity.flexible.ARL.nsim)
@@ -171,6 +190,7 @@ mean.CRI.Fmeasure.flexible.ARL["walk",,]
 ### FIGURE 3 ###
 ################
 pdf("output/Fig3.pdf",width=6,height=6)
+#windows()
 layout(matrix(c(1,1,2,1,1,2,1,1,2,1,1,2,
                 3,3,4,3,3,4,3,3,4,3,3,4,
                 5,5,6,5,5,6,5,5,6,5,5,6), ncol=3, byrow=T))
@@ -235,9 +255,9 @@ for (i in 1:10) {
 precision.proportion.mean.flex <- apply(precision.proportions.flex[,apply(precision.proportions.flex,2,all.NA)==F,], c(1,3), mean) 
 
 #################
-### FIGURE S4 ###
+### FIGURE S6 ###
 #################
-pdf("output/FigS4.pdf",width=9,height=6)
+pdf("output/FigS6.pdf",width=9,height=6)
 layout(matrix(1:4,ncol=2))
 par(mar=c(1,1,1,0), oma=c(6,4,3,14), las=1)
 # plot sensitivity proportions for fixed segmentation
@@ -259,13 +279,13 @@ mtext("(precision)", 4, 2.5, cex=1.3, las=0)
 axis(1,at=bardata,behaviour.labels.ordered.short, las=2)
 legend(max(bardata)+4, 1, behaviour.labels.ordered.short, col=behaviour.colors, pch=15, bty="n", cex=1.3, xpd=NA)
 dev.off()
-### END FIGURE S4 ###
+### END FIGURE S6 ###
 
 #################
-### FIGURE S6 ###
+### FIGURE S8 ###
 #################
 # Patterns of sensitivity and precision when using the number of segments available for each behaviour when using the maximum segment length of 2.0 s. 
-pdf("output/FigS6.pdf",width=5,height=6)
+pdf("output/FigS8.pdf",width=5,height=6)
 layout(matrix(1:3, ncol=1))
 par(mar=c(1,1,0,0), oma=c(5,5,1,10), xpd=T)
 plot.statistic.nsim.behaviour.symbol(mean.CRI.sensitivity.fixed.seglength.small.sample, xlabel="", statistic="Sensitivity", plot.x=F, x.numeric=F)
@@ -273,7 +293,7 @@ plot.statistic.nsim.behaviour.symbol(mean.CRI.precision.fixed.seglength.small.sa
 plot.statistic.nsim.behaviour.symbol(mean.CRI.Fmeasure.fixed.seglength.small.sample, xlabel="Fixed segment length (s)", statistic="F-measure", plot.x=T, x.numeric=F)
 legend("bottomright", inset=c(-.4,0), legend=behaviour.labels.ordered.short, pch=point.type, xpd=NA, col=behaviour.colors)
 dev.off()
-### END FIGURE S6 ###
+### END FIGURE S8 ###
 
 ###############
 ### TABLE 1 ###
@@ -314,3 +334,36 @@ par(mar=c(2,3,2,1), oma=c(0,0,2,0))
 for (i in behaviour.labels.ordered[1:8]) plot.statistic.per.behaviour(calculate.F.measure(sensitivity.fixed.seglength.nsim, precision.fixed.seglength.nsim), i)
 mtext("F-measure - fixed",3,0,cex=1.5,outer=T)
 
+# plot distribution of segment lengths for the different ARL0 values
+pdf("output/FigS3.pdf",width=6,height=6)
+layout(matrix(1:4, ncol=2, byrow=T))
+par(mar=c(1,2,3,1),oma=c(4,4,0,0))
+for (i in 1:length(df1.ARL.values)) {
+  ARL0 <- ARL.values[i]
+  seg.df <- df1.ARL.values[[i]]
+  # distribution of length of all segments
+  hist(seg.df$nobs.segments / 20, xlab="", xlim=c(0,1.6), ylim=c(0,2500), main="", las=1)
+  mtext(substitute(paste(ARL[0]," = ", value), list(value=ARL0)),3,-1)
+}
+mtext('segment length (s)', 1, 2, outer=T)
+mtext('frequency', 2, 2, outer=T)
+dev.off()
+
+# plot distribution of segment lengths per behaviour (9 behaviours)
+unique(df1.ARL.values[[1]]$behaviour.pooled)
+order.alt <- c(1:2,9,5:7,8,3:4)
+pdf("output/FigS4.pdf",width=6,height=6)
+layout(matrix(1:9, ncol=3, byrow=T))
+par(mar=c(2,2,3,1),oma=c(4,4,0,0))
+for (i in order.alt) {
+  behaviour = behaviour.pooled[i]
+  seg.df.behav <- df1.ARL.values[[1]][df1.ARL.values[[1]]$behaviour.pooled==behaviour,]
+  # distribution of length of all segments
+  hist(seg.df.behav$nobs.segments / 20, xlab="", xlim=c(0,1.6), main="", breaks=seq(0,1.6,0.1), las=1)
+  mtext(behaviour.labels.ordered.short[i],3,0)
+  # add the mean segment length
+  text(15/20, 1000, paste('mean segment length = ', round(mean(seg.df$nobs.segments/20),2)))
+}
+mtext('segment length (s)', 1, 2, outer=T)
+mtext('frequency', 2, 2, outer=T)
+dev.off()

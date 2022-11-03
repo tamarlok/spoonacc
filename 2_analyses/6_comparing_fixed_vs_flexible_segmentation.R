@@ -2,7 +2,8 @@
 nsim <- 100
 seg.lengths <- c(0.2,0.4,0.6,0.8,1.0,1.5,2.0) # segment length in seconds
 sensitivity.fixed.seglength.nsim <- array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
-precision.fixed.seglength.nsim <-array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
+specificity.fixed.seglength.nsim <- array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
+precision.fixed.seglength.nsim <- array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
 df1.seg.length <- list(length(seg.lengths))
 df2.seg.length <- list(length(seg.lengths))
 
@@ -12,23 +13,26 @@ for (j in 1:length(seg.lengths)) {
   df2.seg.length[[j]] <- dfs[[2]]
 }
 
-for (j in 1:length(seg.lengths)) { 
+for (j in 2:length(seg.lengths)) { 
   print(seg.lengths[j])
   for (i in 1:nsim) {
     RF.model.output <- RF.model(df1.seg.length[[j]], df2.seg.length[[j]], stand=4)
     performance.stats <- calculate.performance(RF.model.output[[2]])
     sensitivity.fixed.seglength.nsim[i,,j] <- performance.stats[[1]]
+    specificity.fixed.seglength.nsim[i,,j] <- performance.stats[[2]]
     precision.fixed.seglength.nsim[i,,j] <- performance.stats[[3]]
     print(i)
     print(sensitivity.fixed.seglength.nsim[i,,j])
+    print(specificity.fixed.seglength.nsim[i,,j])
     print(precision.fixed.seglength.nsim[i,,j])
   }
 }
 
 # run the flexible segmentation models with different ARL values and a maximum sampling duration of 1.6 s
-ARL.values <- c(100,500,5000,50000) # volgens de manual heeft ARL0=100 geen zin (alleen bepaalde "vaste" waardes kunnen worden gebruikt; 350 is de laagste waarde)
+ARL.values <- c(100,500,5000,50000) # according to the manual, providing values other than the pre-defined values of 370, 500, 600, 700, ..., 1000, 2000, 3000, ..., 10000, 20000, ..., 50000 is not possible. However, the model does not give an error when using ARL0=100,200,370,400, but does when trying ARL0=50 or 350 for example. This gives the error: "No thresholds available for selected ARL0, please see function documentation for supported values". This suggests that additional threshold values have now been added/calculated for ARL0=100,200,300,400 compared to previous versions. However, the distribution of segment lengths is very similar from ARL0=500 onward (but slighlty more short segments are made with ARL0=100).   
 sensitivity.flexible.ARL.nsim <- array(NA, c(nsim,length(behaviour.labels),length(ARL.values)), dimnames = list(1:nsim, behaviour.labels, ARL.values))
-precision.flexible.ARL.nsim <-array(NA, c(nsim,length(behaviour.labels),length(ARL.values)), dimnames = list(1:nsim, behaviour.labels, ARL.values))
+specificity.flexible.ARL.nsim <- array(NA, c(nsim,length(behaviour.labels),length(ARL.values)), dimnames = list(1:nsim, behaviour.labels, ARL.values))
+precision.flexible.ARL.nsim <- array(NA, c(nsim,length(behaviour.labels),length(ARL.values)), dimnames = list(1:nsim, behaviour.labels, ARL.values))
 df1.ARL.values <- list(length(ARL.values))
 df2.ARL.values <- list(length(ARL.values))
 
@@ -43,10 +47,12 @@ for (j in 1:length(ARL.values)) {
   for (i in 1:nsim) {
     RF.model.output <- RF.model(df1.ARL.values[[j]], df2.ARL.values[[j]], stand=4)
     sensitivity.flexible.ARL.nsim[i,,j] <- calculate.performance(RF.model.output[[2]])[[1]]
+    specificity.flexible.ARL.nsim[i,,j] <- calculate.performance(RF.model.output[[2]])[[2]]
     precision.flexible.ARL.nsim[i,,j] <- calculate.performance(RF.model.output[[2]])[[3]]
     print(i)
-    print(sensitivity.flexible.ARL.nsim)
-    print(precision.flexible.ARL.nsim)
+    print(sensitivity.flexible.ARL.nsim[i,,j])
+    print(specificity.flexible.ARL.nsim[i,,j])
+    print(precision.flexible.ARL.nsim[i,,j])
   }
 }
 
@@ -59,7 +65,8 @@ sum(samples.to.keep.per.behaviour) # a total of 2545 segments
 
 nsim=10
 sensitivity.fixed.seglength.nsim.small.sample <- array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
-precision.fixed.seglength.nsim.small.sample <-array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
+specificity.fixed.seglength.nsim.small.sample <- array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
+precision.fixed.seglength.nsim.small.sample <- array(NA, c(nsim,length(behaviour.labels),length(seg.lengths)), dimnames = list(1:nsim, behaviour.labels, seg.lengths))
 
 for (j in 1:length(seg.lengths)) { 
   for (i in 1:nsim) {
@@ -79,9 +86,10 @@ for (j in 1:length(seg.lengths)) {
     RF.model.output <- RF.model(df1, df2, stand=4)
     performance.stats <- calculate.performance(RF.model.output[[2]])
     sensitivity.fixed.seglength.nsim.small.sample[i,,j] <- performance.stats[[1]]
+    specificity.fixed.seglength.nsim.small.sample[i,,j] <- performance.stats[[2]]
     precision.fixed.seglength.nsim.small.sample[i,,j] <- performance.stats[[3]]
     print(seg.lengths[j])
-    print(rbind(performance.stats[[1]], performance.stats[[3]]))
+    print(rbind(performance.stats[[1]], performance.stats[[2]], performance.stats[[3]]))
   }
 }
 

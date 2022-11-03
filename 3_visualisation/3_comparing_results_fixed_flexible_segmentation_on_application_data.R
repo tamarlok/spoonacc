@@ -1,6 +1,6 @@
 ### compare time allocation and estimated prey ingestion rates for fixed and flexible segmentation ###
 
-# Preparation for Figure S5
+# Preparation for Figure S7
 # FIXED
 df.foraging.wadden.fixed <- df.53.hab.fixed[df.53.hab.fixed$wadden==1&df.53.hab.fixed$sex=="F"&df.53.hab.fixed$foraging==1,] 
 for.suc.yday.fixed <- aggregate(cbind(nobs.foraging,nobs.ingest,foraging)~yday+BirdID+year, df.foraging.wadden.fixed, sum)
@@ -16,10 +16,10 @@ for.suc.yday.flex$ingest.rate <- for.suc.yday.flex$nobs.ingest/for.suc.yday.flex
 mean.for.suc.yday.flex <- calculate.mean.95CI.from.log(for.suc.yday.flex)
 
 #################
-### FIGURE S5 ###
+### FIGURE S7 ###
 #################
 # plot means with 95% CI
-pdf("output/FigS5.pdf",width=9,height=7)
+pdf("output/FigS7.pdf",width=9,height=7)
 #windows(9,7)
 par(mar=c(2,2,1,0), oma=c(2,2,0,1))
 # FIXED
@@ -29,13 +29,13 @@ plotCI(mean.for.suc.yday.flex$yday+0.5, mean.for.suc.yday.flex$mean, li=mean.for
 axis(1, at=c(31+28+31+c(1,30+1,30+31+1,30+31+30+1,30+31+30+31+1,30+31+30+31+31+1,30+31+30+31+31+30+1)), labels=c("1 Apr","1 May","1 June","1 July","1 Aug","1 Sep","1 Oct"))
 mtext(expression("Prey ingestion rate ( "*min^-1*" )"),2,2.5,cex=1.2)
 dev.off()
-### END FIGURE S5 ###
+### END FIGURE S7 ###
 
 median((mean.for.suc.yday.fixed$mean/mean.for.suc.yday.flex$mean)) # ratio 1.38
 median((mean.for.suc.yday.flex$mean/mean.for.suc.yday.fixed$mean)) # ratio 0.73
 median((mean.for.suc.yday.fixed$mean-mean.for.suc.yday.flex$mean)/mean(c(mean.for.suc.yday.fixed$mean,mean.for.suc.yday.flex$mean))) # 33% higher estimated prey ingestion rates using fixed compared to flexible segmentation method
 
-# Data preparation for Figure S7
+# Data preparation for Figure S9
 # overall time budget fixed segmentation:
 prop.foraging.day.fixed <- aggregate(cbind(nobs.foraging,nobs.ingest,nobs.segments)~yday, df.53.hab.fixed[df.53.hab.fixed$month%in%4:9,], sum)
 prop.foraging.day.fixed$prop.for <- round(prop.foraging.day.fixed$nobs.foraging/prop.foraging.day.fixed$nobs.segments,3)
@@ -62,10 +62,10 @@ prop.foraging.day.wadden.flex$prop.search <- round((prop.foraging.day.wadden.fle
 prop.foraging.day.wadden.flex$ingest.rate <- round(prop.foraging.day.wadden.flex$nobs.ingest/prop.foraging.day.wadden.flex$nobs.foraging,3)/0.8*60
 
 #################
-### Figure S7 ###
+### Figure S9 ###
 #################
 # plot proportion of time spent foraging and ingesting and the subsequent prey ingestion rate estimated by the two segmentation methods:
-pdf("output/FigS7.pdf", width=10, height=7)
+pdf("output/FigS9.pdf", width=10, height=7)
 #windows(10,7)
 # all data
 layout(matrix(1:6,ncol=2,byrow=F))
@@ -100,9 +100,9 @@ points(ingest.rate~yday, prop.foraging.day.wadden.fixed, pch=21, col="steelblue2
 axis(1, at=c(31+28+31+c(1,30+1,30+31+1,30+31+30+1,30+31+30+31+1,30+31+30+31+31+1,30+31+30+31+31+30+1)), labels=F)
 axis(1, at=c(31+28+31+c(1,30+1,30+31+1,30+31+30+1,30+31+30+31+1,30+31+30+31+31+1)+15), labels=c("Apr","May","June","July","Aug","Sep"), tick=F, line=-0.5, cex.axis=1.3)
 dev.off()
-### END Figure S7 ### 
+### END Figure S9 ### 
 
-# Data preparation for Figure S8
+# Data preparation for Figure S10
 # calculate time budgets for fixed and flexible segmentation in table format:
 dur.behav.yday.fixed.xtabs = xtabs(nobs.segments~pred.behav+yday, data=df.53.hab.fixed[df.53.hab.fixed$month%in%4:9,])
 prop.behav.yday.fixed <- prop.table(dur.behav.yday.fixed.xtabs,2)
@@ -110,9 +110,9 @@ dur.behav.yday.flex.xtabs = xtabs(nobs.segments~pred.behav+yday, data=df.53.hab.
 prop.behav.yday.flex <- prop.table(dur.behav.yday.flex.xtabs,2)
 
 #################
-### Figure S8 ###
+### Figure S10 ###
 #################
-pdf("output/FigS8.pdf", width=10, height=4)
+pdf("output/FigS10.pdf", width=10, height=4)
 layout(matrix(1:2, ncol=2))
 par(mar=c(1,1,2,0), oma=c(1,3,0,8))
 bardata <- barplot(prop.behav.yday.fixed[behaviour.pooled,], main='', col=behaviour.colors, las=1, xaxt='n', yaxt='n', border=NA, ylab="", space=0)
@@ -125,4 +125,4 @@ mtext('FLEXIBLE', 3, 0.6, cex=1)
 legend(190, 0.6, rev(behaviour.labels.ordered), pch=15, col=rev(behaviour.colors), bty='n', xpd=NA, cex=1)
 axis(1, at=bardata[15+c(1,30+1,30+31+1,30+31+30+1,30+31+30+31+1,30+31+30+31+31+1)], labels=c("Apr","May","June","July","Aug","Sep"), tick=F, line=-1)
 dev.off()
-### End Figure S8 ###
+### End Figure S10 ###
