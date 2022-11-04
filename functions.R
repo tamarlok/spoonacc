@@ -153,9 +153,7 @@ create.fixed.segments <- function(segment.length, acc = acc.annotated, remove.sh
 ## Function to create dataframe with flexible segments ##
 #########################################################
 
-create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, max.segment.length=1.6, segmentation.script = "new", startup=1, annotated.data=T, naomit=T) {
-  
-  ### START creation flexible segments ###
+create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, max.segment.length=1.6, startup=1, annotated.data=T, naomit=T) {
   
   ## Renumber column Index so that each obs.id starts at 0
   index.min.obs.id <- aggregate(Index~obs.id, acc, min)
@@ -175,9 +173,8 @@ create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, max.segment
   un.obs.cut <- un.obs.cut$obs.id.cut
   acc <- acc[acc$obs.id.cut %in% un.obs.cut, ]
   
-  # new script:
-  if (segmentation.script == "new") { 
-    for(k in 1 : length(un.obs.cut)) {
+  ### START creation flexible segments ###
+  for(k in 1 : length(un.obs.cut)) {
     temp.acc <- acc[which(acc$obs.id.cut == un.obs.cut[k]),]
     
     dcpb <- processStream(temp.acc$x, "GLR", ARL0=ARL0, startup=startup)   
@@ -186,27 +183,7 @@ create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, max.segment
     
     if (is.na(max(incl))==F) # only run the below line when there is at least one change point, otherwise use the original (and entire) segment.id.cut. 
         acc$segment.id.cut[which(acc$obs.id.cut == un.obs.cut[k])] <- paste(temp.acc$obs.id.cut, letters[rep(c(1:(length(incl)+1)), c(diff(c(0, incl, nrow(temp.acc)))))], sep = ".")
-    }
   }
-    
-   # old script used in Bom et al. 2014 (performs particularly worse with segment lengths of 1-2 s; the new script is insensitive to max seg length)
-   if (segmentation.script == "old") {
-     for(k in 1 : length(un.obs.cut)) {
-      temp.acc <- acc[which(acc$obs.id.cut == un.obs.cut[k]),]
-      
-      dcpb <- processStream(temp.acc$x,"GLR",ARL0=ARL0, startup=startup)
-      
-      incl <- dcpb$changePoints[c(1,which(diff(dcpb$changePoint)>3)+1)]
-      if(length(incl) > 1) # this code causes the segments to be cut into smaller segments only when there is more than one breakpoint, whereas it should also be cut when there is only one breakpoint. This causes the dip in performance at max segment lengths of 1-2 s.
-        acc$segment.id.cut[which(acc$obs.id.cut == un.obs.cut[k])] <- paste(temp.acc$obs.id.cut, letters[rep(c(1:(length(incl)+1)), c(diff(c(0, incl, nrow(temp.acc)))))], sep = ".")
-    }
-  }
-
-  # segments can be shorter but never larger than the sampling duration * sampling frequency:
-  max.segment.length * sampling.freq
-  min(table(acc$segment.id.cut))
-  max(table(acc$segment.id.cut))
-  
   ### END creation flexible segments ###
   
   # remove NA's from acc:
@@ -308,35 +285,6 @@ RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=
   fit.RF
 }
 
-RF.model.diff.ind <- function(seg.df, acc, train.ind = c(760,763), test.ind = 1608, selected.variables = predictors.all, clean.segments.train = FALSE, clean.segments.test = FALSE, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, soar=1) {
-  # in the segmentation function, there is an option to remove all rows which contain at least 1 predictor with NA. If this has NOT been done, we here remove the predictors that contain all NA's (because they can't be calculated over 1 or 2 points), and then remove the remaining rows that still have some NA's for other predictors. 
-  seg.df <- seg.df[,apply(!is.na(seg.df), 2, any)]
-  seg.df <- na.omit(seg.df)
-  
-  data.train <- seg.df[seg.df$BirdID %in% train.ind,] # the training dataset
-  data.test <- seg.df[seg.df$BirdID %in% test.ind,] # the testing dataset
-  
-  # perform up- and downsampling on the train dataset only, to be able to properly interpret the effects on sensitivity and precision for the test dataset
-  data.train <- downsampling.behaviours(data.train, stand=stand, search=search)
-  data.train <- upsampling.behaviours(data.train, drink=drink, handle=handle, ingest=ingest, walk=walk, soar=soar)
-  data.train$behaviour.pooled <-  factor(data.train$behaviour.pooled) 
-  if (clean.segments.train == T) data.train <- data.train[data.train$single.behaviour==1,]
-  if (clean.segments.test == T) data.test <- data.test[data.test$single.behaviour==1,]
-  
-  # remove the predictor variables from selected.variables that contained all NA in seg.df (e.g. noise when there are only 2 samples per segment, at 2 Hz)
-  selected.variables <- selected.variables[selected.variables%in%names(seg.df)]
-  data.train <- data.train[,c("behaviour.pooled", selected.variables)]
-  
-  # fit the model on the train dataset
-  fit.RF <- randomForest(behaviour.pooled ~ ., data = data.train, importance=T)
-  behav.pred <- predict(fit.RF, data.test) # do the prediction on a random selection of the dataset (the testing/validation dataset)
-  df.pred <- cbind(data.test, behav.pred)
-  acc.pred  <- merge(acc, df.pred[,c("segment.id.cut","behav.pred")])
-  mytable <- table(predicted = acc.pred$behav.pred, observed = acc.pred$behaviour.pooled)
-  mytable <- mytable[, match(rownames(mytable), colnames(mytable))]
-  list(fit.RF, mytable, df.pred)
-}
-
 RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, soar=1) {
   seg.df <- downsampling.behaviours(seg.df, stand=stand, search=search)
   seg.df <- upsampling.behaviours(seg.df, drink=drink, handle=handle, ingest=ingest, walk=walk, soar=soar)
@@ -412,7 +360,6 @@ calculate.performance.pooled.behaviours <- function(RF.model.results) {
   accuracy.overall <- sum(diag(RF.model.results))/sum(RF.model.results) # this is the "global" accuracy = (TP+TN)/(TP+FP+FN+TN)
   list(sensitivity, specificity, precision, accuracy.overall)
 }
-
 
 ### Calculate how much estimated intake rate deviates from observed intake rate, calculated over the entire test dataset
 calculate.deviation.intakerate <- function(RF.model.table) {
