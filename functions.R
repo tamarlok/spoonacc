@@ -1,7 +1,6 @@
 # plot all acceleration samples for a selected range of dates during migration for visual annotation of passive flight
 plot.acc.data.migration.bouts <- function(acc, date.start = min(acc$date.time), date.end = max(acc$date.time), select.on.speed = F) {
   acc <- acc[order(acc$date.time, acc$Index),]
-  # only plot selected range of dates, i.e. in this case during migration)
   acc.sel <- acc[acc$date.time>=date.start & acc$date.time<=date.end,] 
   # if select.on.speed is TRUE, only show bouts where speed > 2 m/s. 
   if (select.on.speed==T) acc.sel <- acc.sel[acc.sel$speed_2d>2,]  
@@ -52,6 +51,8 @@ plot.acc.panel <- function(acc.data, plot.x=F, plot.y=F, plot.ingest=F, behaviou
   lines(z~Index, acc.data, col="green")
 }
 
+### Functions for summary statistics ###
+
 # Dominant Power Spectrum
 dps <- function(x){
   d.x <- x - mean(x, na.rm = T)   
@@ -65,6 +66,7 @@ fdps <- function(x){
   return(fq[which.max(((Mod(fft(d.x))^2)/length(x))[1:(length(x)/2)])])
 }
 
+# Overall Dynamic Body Acceleration
 odba <- function(x){
   d.x <- x - mean(x, na.rm = T)   
   return(sum(abs(d.x), na.rm = T)/length(x))
@@ -84,6 +86,8 @@ noise <- function(x){
   }
   return(noise.mean)
 }
+
+### End of summary statistics functions ###
 
 # to make the occurrence of different behaviours similar, downsample search and stand in the data
 downsampling.behaviours <- function(seg.df, stand=1, search=1) {
@@ -179,7 +183,7 @@ create.flexible.segments <- function(ARL0=5000, acc = acc.annotated, max.segment
     
     dcpb <- processStream(temp.acc$x, "GLR", ARL0=ARL0, startup=startup)   
     
-    incl <- dcpb$changePoints[c(1,which(diff(dcpb$changePoints)>2)+1)] # after selecting the first changepoint, only select subsequent changepoints that are more than 2 acc-samples further from the previous changepoint (i.e. causing the minimum segment length to become 3 samples, i.e. 0.15 seconds with 20 Hz data); If breakpoints are estimated at position 3, 5 and 7 for example, only 3 is selected. Bom et al. 2014 used a min. sample size of 4.   
+    incl <- dcpb$changePoints[c(1,which(diff(dcpb$changePoints)>2)+1)] # after selecting the first changepoint, only select subsequent changepoints that are more than 2 acc-samples further from the previous changepoint (i.e. causing the minimum segment length to become 3 samples, i.e. 0.15 seconds with 20 Hz data); If breakpoints are estimated at position 3, 5 and 7 for example, only 3 is selected.  
     
     if (is.na(max(incl))==F) # only run the below line when there is at least one change point, otherwise use the original (and entire) segment.id.cut. 
         acc$segment.id.cut[which(acc$obs.id.cut == un.obs.cut[k])] <- paste(temp.acc$obs.id.cut, letters[rep(c(1:(length(incl)+1)), c(diff(c(0, incl, nrow(temp.acc)))))], sep = ".")
@@ -285,23 +289,7 @@ RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=
   fit.RF
 }
 
-RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, fly_passive=1) {
-  seg.df <- downsampling.behaviours(seg.df, stand=stand, search=search)
-  seg.df <- upsampling.behaviours(seg.df, drink=drink, handle=handle, ingest=ingest, walk=walk, fly_passive=fly_passive)
-  seg.df$behaviour.pooled <-  factor(seg.df$behaviour.pooled)
-  # fit the model on the train dataset
-  fit.RF <- randomForest(behaviour.pooled ~ mean.x + mean.y + mean.z + 
-                           min.x + min.y + min.z + max.x + max.y + max.z + 
-                           trend.x + trend.y + trend.z + odba.x + odba.y + odba.z + odba + 
-                           dps.x + dps.y + dps.z + fdps.x + fdps.y + fdps.z + 
-                           kurt.x + kurt.y + kurt.z + skew.x + skew.y + skew.z +
-                           noise.x + noise.y + noise.z + 
-                           speed_2d, 
-                         data = seg.df, importance=T)
-  fit.RF
-}
-
-## Calculate measures of classification performance for behaviour.pooled classes 
+## Calculate measures of classification performance for each behaviour class 
 calculate.performance <- function(RF.model.results) {
   RF.model.results <- RF.model.results[,is.na(colnames(RF.model.results))==F]
   if (max(colnames(RF.model.results)=="ingest")==0) RF.model.results <- cbind(RF.model.results,"ingest"=0)
@@ -315,11 +303,8 @@ calculate.performance <- function(RF.model.results) {
   if (max(rownames(RF.model.results)=="drink")==0) RF.model.results <- rbind(RF.model.results,"drink"=0)
   if (max(rownames(RF.model.results)=="stand")==0) RF.model.results <- rbind(RF.model.results,"stand"=0)
   
-  # order by column and rowname
-  RF.model.results <- RF.model.results[order(rownames(RF.model.results)),order(colnames(RF.model.results))]
-  
+  RF.model.results <- RF.model.results[order(rownames(RF.model.results)),order(colnames(RF.model.results))] #   # order by column and rowname
   cM <- confusionMatrix(as.table(RF.model.results))
-  names(cM)
   sensitivity <- cM$byClass[,"Sensitivity"] # 
   specificity <- cM$byClass[,"Specificity"] # or recall
   precision <- cM$byClass[,"Pos Pred Value"] # or precision
@@ -371,7 +356,8 @@ calculate.deviation.intakerate <- function(RF.model.table) {
   ratio.pred.obs.intakerate
 }
 
-# Functions for data visualisation
+### Functions for data visualisation ###
+
 ### Functions to calculate means and quantiles on matrices and arrays
 quantile.0.025 <- function(x) quantile(na.omit(x), 0.025)
 quantile.0.975 <- function(x) quantile(na.omit(x), 0.975)
@@ -382,7 +368,7 @@ mean.naomit <- function(x) mean(na.omit(x)) # function to calculate mean after o
 # calculate mean and CRI over simulations
 calculate.mean.CRI <- function(x) {
   mean.CRI <- array(NA, c(dim(x)[2],dim(x)[3],3), dimnames = list(dimnames(x)[[2]], dimnames(x)[[3]], c("mean","lcl","ucl")))
-  mean.CRI[,,"mean"] <- apply(x,c(2,3),mean) # this excludes calculating the mean over part of the simulation that has a value. (for handle and drink) However, this gives very inaccurate estimates, sometimes based only on a few values.
+  mean.CRI[,,"mean"] <- apply(x,c(2,3),mean) 
   mean.CRI[,,"lcl"] <- apply(x,c(2,3),quantile.0.025)
   mean.CRI[,,"ucl"] <- apply(x,c(2,3),quantile.0.975)
   mean.CRI
@@ -474,24 +460,6 @@ from.list.to.df <- function(list) {   # change from list to dataframe to have al
   df <- list[[1]]
   for (i in 2:length(list)) df <- rbind(df, list[[i]])
   df
-}
-
-calculate.mean.95CI.from.logits <- function(df) {
-  df$freq <- 1
-  for.suc.min <- min(df$for.suc[df$for.suc>0])
-  for.suc.max <- min(df$for.suc[df$for.suc<1])
-  df$for.suc.for.logit <- qlogis(df$for.suc)
-  df$for.suc.for.logit[df$for.suc==0] <- qlogis(for.suc.min)
-  df$for.suc.for.logit[df$for.suc==1] <- qlogis(for.suc.max)
-  df.mean.sd <- ddply(df, .(yday), summarize, 
-                      N = sum(freq), for.suc.mean.logit = mean(for.suc.for.logit), for.suc.logit.sd = sd(for.suc.for.logit))
-  df.mean.sd$se.logit <- df.mean.sd$for.suc.logit.sd/sqrt(df.mean.sd$N)
-  df.mean.sd$li.logit <- df.mean.sd$for.suc.mean.logit - 1.96*df.mean.sd$se.logit 
-  df.mean.sd$ui.logit <- df.mean.sd$for.suc.mean.logit + 1.96*df.mean.sd$se.logit 
-  df.mean.sd$mean <- plogis(df.mean.sd$for.suc.mean.logit)
-  df.mean.sd$li <- plogis(df.mean.sd$li.logit)
-  df.mean.sd$ui <- plogis(df.mean.sd$ui.logit)
-  df.mean.sd
 }
 
 calculate.mean.95CI.from.log <- function(df) {
