@@ -101,18 +101,18 @@ text(9.3,9.8,"(b)",cex=2)
 dev.off()
 ### End Figure S2 ###
 
-median(na.omit(duration.behav2.seq.10$duration[duration.behav2.seq.10$behaviour2=="12.for-intake"])) # median duration of ingesting prey is 0.80 s
-mean(na.omit(duration.behav2.seq.10$duration[duration.behav2.seq.10$behaviour2=="12.for-intake"]))
+median(na.omit(duration.behav2.seq.10$duration[duration.behav2.seq.10$behaviour2=="12.ingest"])) # median duration of ingesting prey is 0.80 s
+mean(na.omit(duration.behav2.seq.10$duration[duration.behav2.seq.10$behaviour2=="12.ingest"]))
 # mean duration of ingesting a prey is 0.84 s
 
 # select acceleration samples for plotting representative acceleration samples for the different behaviours
-example.stand <- acc[acc.annotated$segment.id=="584.1371545958.a",][1:32,]
-example.sit <- acc[acc.annotated$segment.id=="584.1371545880.a",][1:32,]
-example.active.flight <- acc[acc.annotated$segment.id=="584.1371546023.a",][1:32,]
-example.passive.flight <- acc[acc.annotated$segment.id=="6291.1474933495.a",][1:32,]
-example.walk <- acc[acc.annotated$segment.id=="1608.1435124109.a",][1:32,]
-example.search <- acc[acc.annotated$segment.id=="1608.1435124018.a",][1:32,] # only searching
-example.search.intake <- acc[acc.annotated$segment.id=="1608.1435124044.a",][1:32,] # including intake
+example.stand <- acc.annotated[acc.annotated$segment.id=="584.1371545958.a",][1:32,]
+example.sit <- acc.annotated[acc.annotated$segment.id=="584.1371545880.a",][1:32,]
+example.active.flight <- acc.annotated[acc.annotated$segment.id=="584.1371546023.a",][1:32,]
+example.passive.flight <- acc.annotated[acc.annotated$segment.id=="6291.1474933495.a",][1:32,]
+example.walk <- acc.annotated[acc.annotated$segment.id=="1608.1435124109.a",][1:32,]
+example.search <- acc.annotated[acc.annotated$segment.id=="1608.1435124018.a",][1:32,] # only searching
+example.search.intake <- acc.annotated[acc.annotated$segment.id=="1608.1435124044.a",][1:32,] # including intake
 acc.data=example.search.intake
 
 ### FIGURE 2 ###
@@ -124,7 +124,7 @@ plot.acc.panel(example.sit, behaviour="sit")
 plot.acc.panel(example.active.flight, plot.y=T, behaviour="fly (active)")
 plot.acc.panel(example.passive.flight, behaviour="fly (passive)")
 plot.acc.panel(example.walk, plot.x=T, plot.y=T, behaviour="walk")
-plot.acc.panel(example.search.intake, plot.x=T, plot.intake=T, behaviour="search")
+plot.acc.panel(example.search.intake, plot.x=T, plot.ingest=T, behaviour="search")
 mtext("Time (s)", 1, 1.5, outer=T)
 mtext("G-force", 2, 1.5, outer=T)
 dev.off()
@@ -133,7 +133,7 @@ dev.off()
 
 # Make animated graph for plotting along with video footage of foraging spoonbill
 # the sample at Time 12:12:05 is suitable and has good quality video footage as well.  
-acc.annotated.760.sel <- acc.annotated.760[acc.annotated.760$Time=='12:12:05',]
+acc.annotated.760.sel <- acc.annotated[acc.annotated$BirdID==760&acc.annotated$Time=='12:12:05',]
 # combine the three axis into one column
 gg.ann.acc.x <- acc.annotated.760.sel[,c('BirdID','segment.id','date.time.acc','x','behaviour.pooled')]
 names(gg.ann.acc.x)[4]='value'
@@ -166,7 +166,6 @@ basic.graph.bg <- ggplot() +
 animated.bg.graph <- basic.graph.bg + 
   transition_reveal(date.time.acc)
 
-animate(animated.bg.graph, duration=10, fps=30, renderer = av_renderer(), width=800, height=200)
+gganimate::animate(animated.bg.graph, duration=10, fps=30, renderer = av_renderer(), width=800, height=200)
 anim_save("output/acc.data.animated.mp4")
 # then open this mp4-file in the Video Editor of Windows11 and save it as mp4 to have the correct codec to import it into Davinci Resolve to combine it with the associated video footage.
-

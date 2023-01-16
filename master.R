@@ -1,4 +1,4 @@
-# code works with R version 3.6.0 and 4.1.3
+# code works with R versions 3.6.0 and 4.1.3
 rm(list=ls()) # clear workspace
 
 # libraries for data preparation:
@@ -52,23 +52,22 @@ set.seed(3) # to be able to reproduce random processes
 source("1_data_preparation/1_visually_check_and_select_soaring_flight_data.R")
 source("1_data_preparation/2_combine_annotated_data_with_soaring_flight_data.R")
 source("3_visualisation/1_plot_acceleration_data.R")
+#save.image('data/processed/acc.data.processed.RData')
+load('data/processed/acc.data.processed.RData')
 
 # exploratory data analyses for training and testing random forest models on annotated data
-source("2_analyses/1_exploring_effect_clean_train_segments.R") # shows that clean segments do not improve model performance
-save.image("data/tmp/Results.effect.clean.train.segments.RData")
-source("2_analyses/2_exploring_effect_max_segment_length_and_startup_value.R") 
-save.image("data/tmp/Results.effect.max.segment.length.and.startup.value.RData")
+source("2_analyses/1_exploring_effect_clean_train_segments.R")
+source("2_analyses/2_exploring_effect_max_segment_length_and_startup_value.R")
 source("2_analyses/3_exploring_effect_reduced_predictor_set.R")
-save.image("data/tmp/Results.effect.reduced.predictor.set.RData")
 source("2_analyses/4_exploring_effect_down-_vs_upsampling.R")
-save.image("data/tmp/Results.effect.down.up.sampling.RData") 
 source("2_analyses/5_exploring_effect_sampling_frequency.R")
-save.image("data/tmp/Results.effect.sampling.frequency.RData")
 # end of exploratory analyses
 
 # comparing model performance when using the fixed versus flexible segmentation method, while downsampling standing data 4x in the training dataset
 source("2_analyses/6_comparing_fixed_vs_flexible_segmentation.R")
-save.image("data/tmp/Results.fixed.vs.flexible.segmentation.0913.RData")
+
+#save.image("data/tmp/Results.model.development.0112.RData")
+load("data/tmp/Results.model.development.0112.RData")
 
 source("3_visualisation/2_plot_results_model_development.R")
 # best models use fixed-length segments of 0.4 s or variable-length segments
@@ -77,8 +76,10 @@ source("3_visualisation/2_plot_results_model_development.R")
 source("1_data_preparation/3_load_and_process_application_data.R")
 source("2_analyses/7_apply_best_models_to_application_data.R")
 save.image("data/tmp/application.predicted.behaviour.0124.RData") 
+load("data/tmp/application.predicted.behaviour.0124.RData")
 source("2_analyses/8_link_classified_acc_data_with_habitat.R")
-save.image("data/tmp/application.data.linked.to.habitat.RData")
+save.image("data/tmp/application.data.linked.to.habitat.females.RData") # contains only the females
+load("data/tmp/application.data.linked.to.habitat.females.RData")
 source("2_analyses/9_statistical_analysis_of_prey_ingestion_rates.R")
-source("3_visualisation/3_comparing_results_fixed_flexible_segmentation_on_application_data.R") 
+source("3_visualisation/3_plot_results_application_data_analysis.R") 
 source("3_visualisation/4_plot_spatial_distribution_of_foraging_habitats.R")

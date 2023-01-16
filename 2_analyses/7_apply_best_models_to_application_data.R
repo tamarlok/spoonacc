@@ -1,25 +1,19 @@
-load("data/tmp/Results.fixed.vs.flexible.segmentation.RData")
 gdata::keep(dfs.fixed.0.4, dfs.flex.100, sure=T)
+source('functions.R') # reload the functions
 
-# load the gps and acc data, along with the bird.data:
-load("data/processed/gps.acc.data.list.RData")
+# load the gps and acc data, available at https://doi.org/10.25850/nioz/7b.b.yd. 
+bird.data <- data.frame(logger=c(6283,6284,6285,6289,6291,6294,6284,6298),sex=rep("F",8),year.start=c(rep(2016,6),rep(2017,2)), year.end=c(2020,2017,2017,rep(2020,5))) 
+gps.acc.data.list <- list()
+for (i in 1:dim(bird.data)[1]) {
+  filename <- paste("data/raw/gps.acc.data.", bird.data$logger[i],"_", bird.data$year.start[i],".csv", sep="")
+  gps.acc.data.list[[i]] <- read.csv(filename)
+}
 
-# alternatively, load data from csv files (this takes considerably longer than loading from the RData file):
-#bird.data <- read.csv("data/raw/bird.data.application.csv")
-#gps.acc.data.list <- list()
-#for (i in 1:dim(bird.data)[1]) {
-#  filename <- paste("data/processed/gps.acc.data.", bird.data$logger[i],"_", bird.data$year.start[i],".csv", sep="")
-#  gps.acc.data.list[[i]] <- read.csv(filename)
-#}
-# end alternative loading
-
-for (i in 1:dim(bird.data)[1]) print(dim(gps.acc.data.list[[i]])[1])
-  
-# train best supported RF models on all annotated data:
+# train best-supported RF models on all annotated data:
 RF.fixed.0.4 <- RF.model.start(dfs.fixed.0.4[[1]], stand=4)
 RF.flexible.100 <- RF.model.start(dfs.flex.100[[1]], stand=4)
 
-# do the segmentation and prediction of behaviour before making it a df, to save memory space
+# do the segmentation and classification of behaviour before making it a df, to save memory space
 seg.df.list.fixed.0.4 <- list()
 for (i in 1:length(gps.acc.data.list)) {
   data = gps.acc.data.list[[i]]
@@ -44,4 +38,4 @@ for (i in 1:length(gps.acc.data.list)) {
 df.all.fixed.0.4 <- from.list.to.df(seg.df.list.fixed.0.4)
 df.all.flex <- from.list.to.df(seg.df.list.flex)
 
-keep(df.all.fixed.0.4, df.all.flex, RF.fixed.0.4, RF.flexible.100, bird.data, behaviour.colors, behaviours, sure=T)
+gdata::keep(df.all.fixed.0.4, df.all.flex, RF.fixed.0.4, RF.flexible.100, bird.data, behaviour.colors, behaviours, sure=T)

@@ -1,4 +1,4 @@
-# plot all acceleration samples for a selected range of dates during migration for visual annotation of soaring flight
+# plot all acceleration samples for a selected range of dates during migration for visual annotation of passive flight
 plot.acc.data.migration.bouts <- function(acc, date.start = min(acc$date.time), date.end = max(acc$date.time), select.on.speed = F) {
   acc <- acc[order(acc$date.time, acc$Index),]
   # only plot selected range of dates, i.e. in this case during migration)
@@ -32,14 +32,14 @@ plot.acc.data.migration.bouts <- function(acc, date.start = min(acc$date.time), 
 }
 
 #### Make graph of acceleration signal for one selected acceleration sample
-plot.acc.panel <- function(acc.data, plot.x=F, plot.y=F, plot.intake=F, behaviour=NA) {
-  if (plot.intake==F) plot(x~Index, acc.data, xlim=c(0,31), ylim=c(-3,3), xaxt="n", yaxt="n", type="n")
-  if (plot.intake==T) {
+plot.acc.panel <- function(acc.data, plot.x=F, plot.y=F, plot.ingest=F, behaviour=NA) {
+  if (plot.ingest==F) plot(x~Index, acc.data, xlim=c(0,31), ylim=c(-3,3), xaxt="n", yaxt="n", type="n")
+  if (plot.ingest==T) {
     plot(x~Index, acc.data, xlim=c(0,32), ylim=c(-3,3), xaxt="n", yaxt="n", type="n")
-    start.intake <- min(acc.data$Index[acc.data$behaviour2=="12.for-intake"])
-    end.intake <- max(acc.data$Index[acc.data$behaviour2=="12.for-intake"])
-    polygon(c(start.intake, end.intake, end.intake, start.intake), c(-3.21,-3.21,3.2,3.2), col="grey90", border=F) 
-    text(mean(c(start.intake, end.intake)), 2.8,"ingest", cex=1.4)
+    start.ingest <- min(acc.data$Index[acc.data$behaviour2=="12.ingest"])
+    end.ingest <- max(acc.data$Index[acc.data$behaviour2=="12.ingest"])
+    polygon(c(start.ingest, end.ingest, end.ingest, start.ingest), c(-3.21,-3.21,3.2,3.2), col="grey90", border=F) 
+    text(mean(c(start.ingest, end.ingest)), 2.8,"ingest", cex=1.4)
   }
   if (plot.x==T) axis(1,at=c(0,10,20,30),labels=c(0,0.5,1,1.5))
   if (plot.y==T) axis(2, at=seq(-3,3,1), las=1)
@@ -85,23 +85,23 @@ noise <- function(x){
   return(noise.mean)
 }
 
-# to make the occurrence of different behaviours similar, downsample for-search and stand in the data
+# to make the occurrence of different behaviours similar, downsample search and stand in the data
 downsampling.behaviours <- function(seg.df, stand=1, search=1) {
-  segments.to.keep <- c(seg.df$segment.id.cut[seg.df$behaviour.pooled!="stand"&seg.df$behaviour.pooled!="for-search"],
+  segments.to.keep <- c(seg.df$segment.id.cut[seg.df$behaviour.pooled!="stand"&seg.df$behaviour.pooled!="search"],
                         sample(seg.df$segment.id.cut[seg.df$behaviour.pooled=="stand"],length(seg.df$segment.id.cut[seg.df$behaviour.pooled=="stand"])/stand),
-                        sample(seg.df$segment.id.cut[seg.df$behaviour.pooled=="for-search"],length(seg.df$segment.id.cut[seg.df$behaviour.pooled=="for-search"])/search))
+                        sample(seg.df$segment.id.cut[seg.df$behaviour.pooled=="search"],length(seg.df$segment.id.cut[seg.df$behaviour.pooled=="search"])/search))
   seg.df <- seg.df[seg.df$segment.id.cut %in% segments.to.keep,]
   seg.df
 }
 
 # in case we also want to upsample certain behaviours, it is important to only do that in the training dataset. 
-upsampling.behaviours <- function(seg.df, drink=1, handle=1, ingest=1, walk=1, soar=1) {
+upsampling.behaviours <- function(seg.df, drink=1, handle=1, ingest=1, walk=1, fly_passive=1) {
   drink.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="drink"), size=drink*dim(seg.df[seg.df$behaviour.pooled=="drink",])[1], replace=TRUE)
-  handle.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="for-handle"), size=handle*dim(seg.df[seg.df$behaviour.pooled=="for-handle",])[1], replace=TRUE)
-  ingest.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="for-intake"), size=ingest*dim(seg.df[seg.df$behaviour.pooled=="for-intake",])[1], replace=TRUE)
+  handle.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="handle"), size=handle*dim(seg.df[seg.df$behaviour.pooled=="handle",])[1], replace=TRUE)
+  ingest.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="ingest"), size=ingest*dim(seg.df[seg.df$behaviour.pooled=="ingest",])[1], replace=TRUE)
   walk.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="walk"), size=walk*dim(seg.df[seg.df$behaviour.pooled=="walk",])[1], replace=TRUE)
-  soar.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="fly-soar"), size=soar*dim(seg.df[seg.df$behaviour.pooled=="fly-soar",])[1], replace=TRUE)
-  seg.df.upsampled <- seg.df[c(1:dim(seg.df)[1],drink.resampled.rows,handle.resampled.rows,ingest.resampled.rows,walk.resampled.rows,soar.resampled.rows),]
+  fly_passive.resampled.rows <- gdata::resample(which(seg.df$behaviour.pooled=="fly-passive"), size=fly_passive*dim(seg.df[seg.df$behaviour.pooled=="fly-passive",])[1], replace=TRUE)
+  seg.df.upsampled <- seg.df[c(1:dim(seg.df)[1],drink.resampled.rows,handle.resampled.rows,ingest.resampled.rows,walk.resampled.rows,fly_passive.resampled.rows),]
   seg.df.upsampled
 }
 
@@ -239,7 +239,7 @@ assign.behaviour.to.segments <- function(seg.df, acc) {
 ## Function for Random Forest model ##
 ######################################
 
-RF.model <- function(seg.df, acc, selected.variables = predictors.all, clean.segments.train = FALSE, clean.segments.test = FALSE, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, soar=1) {
+RF.model <- function(seg.df, acc, selected.variables = predictors.all, clean.segments.train = FALSE, clean.segments.test = FALSE, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, fly_passive=1) {
   # in the segmentation function, there is an option to remove all rows which contain at least 1 predictor with NA. If this has NOT been done, we here remove the predictors that contain all NA's (because they can't be calculated over 1 or 2 points), and then remove the remaining rows that still have some NA's for other predictors. 
   seg.df <- seg.df[,apply(!is.na(seg.df), 2, any)]
   seg.df <- na.omit(seg.df)
@@ -250,7 +250,7 @@ RF.model <- function(seg.df, acc, selected.variables = predictors.all, clean.seg
   
   # perform up- and downsampling on the train dataset only, to be able to properly interpret the effects on sensitivity and precision for the test dataset
   data.train <- downsampling.behaviours(data.train, stand=stand, search=search)
-  data.train <- upsampling.behaviours(data.train, drink=drink, handle=handle, ingest=ingest, walk=walk, soar=soar)
+  data.train <- upsampling.behaviours(data.train, drink=drink, handle=handle, ingest=ingest, walk=walk, fly_passive=fly_passive)
   data.train$behaviour.pooled <-  factor(data.train$behaviour.pooled) 
   if (clean.segments.train == T) data.train <- data.train[data.train$single.behaviour==1,]
   if (clean.segments.test == T) data.test <- data.test[data.test$single.behaviour==1,]
@@ -269,9 +269,9 @@ RF.model <- function(seg.df, acc, selected.variables = predictors.all, clean.seg
   list(fit.RF, mytable, df.pred)
 }
 
-RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, soar=1) {
+RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, fly_passive=1) {
   seg.df <- downsampling.behaviours(seg.df, stand=stand, search=search)
-  seg.df <- upsampling.behaviours(seg.df, drink=drink, handle=handle, ingest=ingest, walk=walk, soar=soar)
+  seg.df <- upsampling.behaviours(seg.df, drink=drink, handle=handle, ingest=ingest, walk=walk, fly_passive=fly_passive)
   seg.df$behaviour.pooled <-  factor(seg.df$behaviour.pooled)
   # fit the model on the train dataset
   fit.RF <- randomForest(behaviour.pooled ~ mean.x + mean.y + mean.z + 
@@ -285,9 +285,9 @@ RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=
   fit.RF
 }
 
-RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, soar=1) {
+RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=1, walk=1, fly_passive=1) {
   seg.df <- downsampling.behaviours(seg.df, stand=stand, search=search)
-  seg.df <- upsampling.behaviours(seg.df, drink=drink, handle=handle, ingest=ingest, walk=walk, soar=soar)
+  seg.df <- upsampling.behaviours(seg.df, drink=drink, handle=handle, ingest=ingest, walk=walk, fly_passive=fly_passive)
   seg.df$behaviour.pooled <-  factor(seg.df$behaviour.pooled)
   # fit the model on the train dataset
   fit.RF <- randomForest(behaviour.pooled ~ mean.x + mean.y + mean.z + 
@@ -304,14 +304,14 @@ RF.model.start <- function(seg.df, stand=1, search=1, drink=1, handle=1, ingest=
 ## Calculate measures of classification performance for behaviour.pooled classes 
 calculate.performance <- function(RF.model.results) {
   RF.model.results <- RF.model.results[,is.na(colnames(RF.model.results))==F]
-  if (max(colnames(RF.model.results)=="for-intake")==0) RF.model.results <- cbind(RF.model.results,"for-intake"=0)
-  if (max(colnames(RF.model.results)=="for-handle")==0) RF.model.results <- cbind(RF.model.results,"for-handle"=0)
-  if (max(colnames(RF.model.results)=="fly-soar")==0) RF.model.results <- cbind(RF.model.results,"fly-soar"=0)
+  if (max(colnames(RF.model.results)=="ingest")==0) RF.model.results <- cbind(RF.model.results,"ingest"=0)
+  if (max(colnames(RF.model.results)=="handle")==0) RF.model.results <- cbind(RF.model.results,"handle"=0)
+  if (max(colnames(RF.model.results)=="fly-passive")==0) RF.model.results <- cbind(RF.model.results,"fly-passive"=0)
   if (max(colnames(RF.model.results)=="drink")==0) RF.model.results <- cbind(RF.model.results,"drink"=0)
   if (max(colnames(RF.model.results)=="stand")==0) RF.model.results <- cbind(RF.model.results,"stand"=0)
-  if (max(rownames(RF.model.results)=="for-intake")==0) RF.model.results <- rbind(RF.model.results,"for-intake"=0)
-  if (max(rownames(RF.model.results)=="for-handle")==0) RF.model.results <- rbind(RF.model.results,"for-handle"=0)
-  if (max(rownames(RF.model.results)=="fly-soar")==0) RF.model.results <- rbind(RF.model.results,"fly-soar"=0)
+  if (max(rownames(RF.model.results)=="ingest")==0) RF.model.results <- rbind(RF.model.results,"ingest"=0)
+  if (max(rownames(RF.model.results)=="handle")==0) RF.model.results <- rbind(RF.model.results,"handle"=0)
+  if (max(rownames(RF.model.results)=="fly-passive")==0) RF.model.results <- rbind(RF.model.results,"fly-passive"=0)
   if (max(rownames(RF.model.results)=="drink")==0) RF.model.results <- rbind(RF.model.results,"drink"=0)
   if (max(rownames(RF.model.results)=="stand")==0) RF.model.results <- rbind(RF.model.results,"stand"=0)
   
@@ -330,27 +330,27 @@ calculate.performance <- function(RF.model.results) {
 
 calculate.performance.pooled.behaviours <- function(RF.model.results) {
   RF.model.results <- RF.model.results[,is.na(colnames(RF.model.results))==F]
-  if (max(colnames(RF.model.results)=="for-intake")==0) RF.model.results <- cbind(RF.model.results,"for-intake"=0)
-  if (max(colnames(RF.model.results)=="for-handle")==0) RF.model.results <- cbind(RF.model.results,"for-handle"=0)
-  if (max(colnames(RF.model.results)=="fly-soar")==0) RF.model.results <- cbind(RF.model.results,"fly-soar"=0)
+  if (max(colnames(RF.model.results)=="ingest")==0) RF.model.results <- cbind(RF.model.results,"ingest"=0)
+  if (max(colnames(RF.model.results)=="handle")==0) RF.model.results <- cbind(RF.model.results,"handle"=0)
+  if (max(colnames(RF.model.results)=="fly-passive")==0) RF.model.results <- cbind(RF.model.results,"fly-passive"=0)
   if (max(colnames(RF.model.results)=="drink")==0) RF.model.results <- cbind(RF.model.results,"drink"=0)
   if (max(colnames(RF.model.results)=="stand")==0) RF.model.results <- cbind(RF.model.results,"stand"=0)
-  if (max(rownames(RF.model.results)=="for-intake")==0) RF.model.results <- rbind(RF.model.results,"for-intake"=0)
-  if (max(rownames(RF.model.results)=="for-handle")==0) RF.model.results <- rbind(RF.model.results,"for-handle"=0)
-  if (max(rownames(RF.model.results)=="fly-soar")==0) RF.model.results <- rbind(RF.model.results,"fly-soar"=0)
+  if (max(rownames(RF.model.results)=="ingest")==0) RF.model.results <- rbind(RF.model.results,"ingest"=0)
+  if (max(rownames(RF.model.results)=="handle")==0) RF.model.results <- rbind(RF.model.results,"handle"=0)
+  if (max(rownames(RF.model.results)=="fly-passive")==0) RF.model.results <- rbind(RF.model.results,"fly-passive"=0)
   if (max(rownames(RF.model.results)=="drink")==0) RF.model.results <- rbind(RF.model.results,"drink"=0)
   if (max(rownames(RF.model.results)=="stand")==0) RF.model.results <- rbind(RF.model.results,"stand"=0)
   
   # order by column and rowname
   RF.model.results <- RF.model.results[order(rownames(RF.model.results)),order(colnames(RF.model.results))]
   # merge active on the ground behaviours: 
-  RF.model.results <- cbind(RF.model.results, active.ground=rowSums(RF.model.results[,c("for-handle","for-intake","for-search","drink","walk")]))
-  RF.model.results <- rbind(RF.model.results, active.ground=colSums(RF.model.results[c("for-handle","for-intake","for-search","drink","walk"),]))
+  RF.model.results <- cbind(RF.model.results, active.ground=rowSums(RF.model.results[,c("handle","ingest","search","drink","walk")]))
+  RF.model.results <- rbind(RF.model.results, active.ground=colSums(RF.model.results[c("handle","ingest","search","drink","walk"),]))
   # merge resting
   RF.model.results <- cbind(RF.model.results, rest=rowSums(RF.model.results[,c("stand","sit")]))
   RF.model.results <- rbind(RF.model.results, rest=colSums(RF.model.results[c("stand","sit"),]))
-  # only keep merged behaviours, and fly-flap and fly-soar:
-  RF.model.results <- RF.model.results[c("fly-flap","fly-soar","active.ground","rest"),c("fly-flap","fly-soar","active.ground","rest")]
+  # only keep merged behaviours, and fly-active and fly-passive:
+  RF.model.results <- RF.model.results[c("fly-active","fly-passive","active.ground","rest"),c("fly-active","fly-passive","active.ground","rest")]
   
   cM <- confusionMatrix(as.table(RF.model.results))
   names(cM)
@@ -361,13 +361,13 @@ calculate.performance.pooled.behaviours <- function(RF.model.results) {
   list(sensitivity, specificity, precision, accuracy.overall)
 }
 
-### Calculate how much estimated intake rate deviates from observed intake rate, calculated over the entire test dataset
+### Calculate how much estimated ingest rate deviates from observed ingest rate, calculated over the entire test dataset
 calculate.deviation.intakerate <- function(RF.model.table) {
   observed <- colSums(RF.model.table)
   predicted <- rowSums(RF.model.table)
-  intake.rate.obs <- observed["for-intake"]/(observed["for-search"]+observed["for-handle"]+observed["for-intake"])
-  intake.rate.pred <- predicted["for-intake"]/(predicted["for-search"]+predicted["for-handle"]+predicted["for-intake"])
-  ratio.pred.obs.intakerate <- intake.rate.pred/intake.rate.obs
+  ingest.rate.obs <- observed["ingest"]/(observed["search"]+observed["handle"]+observed["ingest"])
+  ingest.rate.pred <- predicted["ingest"]/(predicted["search"]+predicted["handle"]+predicted["ingest"])
+  ratio.pred.obs.intakerate <- ingest.rate.pred/ingest.rate.obs
   ratio.pred.obs.intakerate
 }
 
@@ -392,7 +392,7 @@ calculate.mean.CRI <- function(x) {
 plot.statistic.single <- function(x, xlabel="Segment length", statistic="Sensitivity", plot.x=T, plot.y=T, legend=F) { # x is a matrix with in columns what should be on the x-axis, and in rows the different behaviours
   xrange <- as.numeric(colnames(x))
   behaviours <- rownames(x)
-  x <- x[behaviour.labels.ordered,] # order behaviours for plotting
+  x <- x[behaviour.pooled.ordered,] # order behaviours for plotting
   plot(c(min(xrange),max(xrange)), c(0,1), type="n", xlab="", ylab="", cex.lab=1.5, xaxt="n", yaxt="n")
   for (i in 1:dim(x)[1]) lines(xrange, x[i,], col=behaviour.colors[i])
   for (i in 1:dim(x)[1]) points(xrange, x[i,], pch=point.type[i], col=behaviour.colors[i], bg="white") # plot points after lines to avoid lines to cross over points
@@ -408,12 +408,12 @@ plot.statistic.single <- function(x, xlabel="Segment length", statistic="Sensiti
 }
 
 plot.statistic.nsim.behaviour.x <- function(x, xadj=0, colour="grey") { # plot results as points to an existing plot, x is a matrix, with behavour in columns
-  arrows(1:length(behaviour.pooled)+xadj, apply(x,2,mean), y1=apply(x,2,quantile.0.025), length=0)
-  arrows(1:length(behaviour.pooled)+xadj, apply(x,2,mean), y1=apply(x,2,quantile.0.975), length=0)
-  points(1:length(behaviour.pooled)+xadj, apply(x,2,mean), pch=21, bg=colour, cex=2)
+  arrows(1:length(behaviour.pooled.ordered)+xadj, apply(x,2,mean), y1=apply(x,2,quantile.0.025), length=0)
+  arrows(1:length(behaviour.pooled.ordered)+xadj, apply(x,2,mean), y1=apply(x,2,quantile.0.975), length=0)
+  points(1:length(behaviour.pooled.ordered)+xadj, apply(x,2,mean), pch=21, bg=colour, cex=2)
 }
 
-plot.statistic.nsim.behaviour.symbol <- function(x, xlabel="Segment length", statistic="Sensitivity", behaviours = behaviour.labels.ordered, colors=behaviour.colors, x.numeric=T, plot.x=T, plot.y=T, xlas=1, xline=3, legend=F) { # x is an array with the first dimension being the behaviour, the 2nd what should be on the x-axis (segment length or ARL value), and the 3rd being the mean, lcl and ucl
+plot.statistic.nsim.behaviour.symbol <- function(x, xlabel="Segment length", statistic="Sensitivity", behaviours = behaviour.pooled.ordered, colors=behaviour.colors, x.numeric=T, plot.x=T, plot.y=T, xlas=1, xline=3, legend=F) { # x is an array with the first dimension being the behaviour, the 2nd what should be on the x-axis (segment length or ARL value), and the 3rd being the mean, lcl and ucl
   x <- x[behaviours,,] # order behaviours for plotting
   if (x.numeric==T) xrange <- as.numeric(dimnames(x)[[2]]) else xrange <- 1:dim(x)[2]
   plot(xrange, x[1,,"mean"], xlim=c(min(xrange)-0.2*(max(xrange)-min(xrange))/length(xrange), max(xrange)+0.2*(max(xrange)-min(xrange))/length(xrange)), ylim=c(0,1), xaxt="n", yaxt="n", pch=19, type="n", xlab="", ylab="", las=1)
@@ -423,7 +423,7 @@ plot.statistic.nsim.behaviour.symbol <- function(x, xlabel="Segment length", sta
     arrows(xrange-(5-i)*0.05, x[i,,"mean"], y1=x[i,,"ucl"], length=0, col=colors[i])
   }
   for (i in 1:dim(x)[1]) points(xrange-(5-i)*0.05, x[i,,"mean"], pch=point.type[i], bg="white", cex=1.3, col=colors[i]) # plot the points after the lines, so that lines are not plotted over the points
-  if (legend==T) legend("bottomright", legend=behaviour.labels.ordered, pch=point.type, col=colors)
+  if (legend==T) legend("bottomright", legend=behaviour.labels, pch=point.type, col=colors)
   if (plot.x==T) {
     if (x.numeric==T) axis(1, at=xrange, las=xlas) else axis(1, at=xrange, labels=dimnames(x)[[2]], las=xlas)
     mtext(xlabel, 1, xline, xpd=T) 
@@ -434,7 +434,7 @@ plot.statistic.nsim.behaviour.symbol <- function(x, xlabel="Segment length", sta
   }
 }
 
-plot.CI.deviation.intakerate <- function(x, at=1, colour="grey") { # plot results as points to an existing plot, x is a vector
+plot.CI.deviation.ingestrate <- function(x, at=1, colour="grey") { # plot results as points to an existing plot, x is a vector
   arrows(at, mean(x), y1 = quantile.0.025(x), length=0)
   arrows(at, mean(x), y1 = quantile.0.975(x), length=0)
   points(at, mean(x), pch=21, bg=colour, cex=2)
@@ -511,16 +511,13 @@ calculate.mean.95CI.from.log <- function(df) {
 
 add.columns.to.application.data <- function(df) {
   # link df with predicted behaviours per segment to df with habitat per date_time/BirdID
-  df <- merge(df[df$latitude>53,c(names(df)[1:8],"pred.behav","mean.x","min.x","max.x","odba.x","odba.z","odba","dps.x","fdps.x","max.z")], df.uni.53[,c("BirdID","date_time","Name","habitat")], by=c("BirdID","date_time"))
-  
-  # remove 763 from the data as tracker was malfunctioning:
-  df <- df[df$BirdID!="763_2016",]
+  df <- merge(df[df$latitude>53,c(names(df)[1:8],"pred.behav","mean.x","min.x","max.x","odba.x","odba.z","odba","dps.x","fdps.x","max.z")], df.uni.53[,c("BirdID","date_time","Name")], by=c("BirdID","date_time"))
   
   # define foraging and ingesting prey
   df$foraging <- 0
-  df$foraging[df$pred.behav %in% c("for-search","for-handle","for-intake")] <- 1
+  df$foraging[df$pred.behav %in% c("search","handle","ingest")] <- 1
   df$ingest <- 0
-  df$ingest[df$pred.behav == "for-intake"] <- 1
+  df$ingest[df$pred.behav == "ingest"] <- 1
   # number of samples defined as foraging or ingest:
   df$nobs.foraging <- df$nobs.segments * df$foraging
   df$nobs.ingest <- df$nobs.segments * df$ingest
@@ -536,15 +533,9 @@ add.columns.to.application.data <- function(df) {
   df <- merge(df, bird.data[,c("BirdID","sex")])
   df <- df[order(df$BirdID, df$date_time),]
   
-  # add some more columns
-  df$land_water <- ifelse(df$habitat%in%c("LM_zoet","Noordzee","Schier_brak","Schier_Zoet","waddenzee","wal_rest_zoet"),"water","land")
-  df$behav.pooled <- as.character(df$pred.behav)
-  df$behav.pooled[df$pred.behav%in%c("fly-soar","fly-flap")] <- "fly"
-  df$behav.pooled[df$pred.behav%in%c("sit","stand")] <- "rest"
+  # create wadden column which is 1 when the GPS location is associated with a Kombergingsgebied name in the Baptist ecotope file
   df$wadden <- ifelse(is.na(df$Name)==T,0,1)
-  df$wadden2 <- ifelse(df$habitat=="waddenzee",1,0)
-  
   df
 }
 
-calculate.ingest.rate <- function(x) x[,'for-intake'] / rowSums(x[,c('for-handle','for-search','for-intake')])
+calculate.ingest.rate <- function(x) x[,'ingest'] / rowSums(x[,c('handle','search','ingest')])

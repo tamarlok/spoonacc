@@ -1,12 +1,12 @@
-# load processed data from previous script
-acc.soaring <- read.csv("data/processed/visual_annotated_soaring_flight_data.csv")
+# load graphically-annotated flight data (as produced by preceding script): 
+acc.soaring <- read.csv("data/processed/visual_annotated_passive_flight_data.csv") # available at https://doi.org/10.25850/nioz/7b.b.yd
 acc.soaring$annotation.method <- "visual"
 
-# load processed video annotated data
-acc.video <- read.csv("data/processed/video_annotated_data.csv")
+# load video-annotated data
+acc.video <- read.csv("data/raw/video_annotated_data.csv")
 acc.video <- acc.video[,1:10] # remove the video information columns, not needed for analysis
 # load list of behaviours distinguished during video annotation:
-behaviours <- read.csv("data/raw/behaviours.csv")
+behaviours <- read.csv("data/raw/behaviours.csv") # available at https://doi.org/10.25850/nioz/7b.b.yd
 acc.video$annotation.method <- "video"
 acc.annotated <- rbind(acc.video, acc.soaring) # combine visual and video annotated data
 acc.annotated$date.time <- ymd_hms(acc.annotated$date.time)
@@ -32,12 +32,12 @@ acc.annotated$behaviour1[acc.annotated$behaviour1=="stand-preen"]<-"03.stand-pre
 acc.annotated$behaviour1[acc.annotated$behaviour1=="stand-other"]<-"04.stand-other"
 acc.annotated$behaviour1[acc.annotated$behaviour1=="stand-shake-feathers"]<-"05.shake-feathers"
 acc.annotated$behaviour1[acc.annotated$behaviour1=="sit-alert"]<-"06.sit-alert"
-acc.annotated$behaviour1[acc.annotated$behaviour1=="fly-flap"]<-"07.fly-flap"
-acc.annotated$behaviour1[acc.annotated$behaviour1=="fly-soar"]<-"08.fly-soar"
+acc.annotated$behaviour1[acc.annotated$behaviour1=="fly-flap"]<-"07.fly-active"
+acc.annotated$behaviour1[acc.annotated$behaviour1=="fly-soar"]<-"08.fly-passive"
 acc.annotated$behaviour1[acc.annotated$behaviour1=="walk"]<-"09.walk"
-acc.annotated$behaviour1[acc.annotated$behaviour1=="for-search"]<-"10.for-search"
-acc.annotated$behaviour1[acc.annotated$behaviour1=="for-handle"]<-"11.for-handle"
-acc.annotated$behaviour1[acc.annotated$behaviour1=="for-intake"]<-"12.for-intake"
+acc.annotated$behaviour1[acc.annotated$behaviour1=="for-search"]<-"10.search"
+acc.annotated$behaviour1[acc.annotated$behaviour1=="for-handle"]<-"11.handle"
+acc.annotated$behaviour1[acc.annotated$behaviour1=="for-intake"]<-"12.ingest"
 acc.annotated$behaviour1[acc.annotated$behaviour1=="drink"]<-"13.drink"
 
 # create column with behaviours pooled into 9 classes:
@@ -64,5 +64,5 @@ predictors.all <- c("mean.x", "mean.y", "mean.z", "min.x", "min.y", "min.z",
                     "skew.x", "skew.y", "skew.z", "noise.x", "noise.y", "noise.z", 
                     "speed_2d")
 
-# Create behaviour labels
-behaviour.labels <- c("drink", "fly-flap","fly-soar","forage-handle","forage-intake","forage-search","sit","stand","walk")
+# Create behaviour names for pooled behaviours
+behaviour.pooled <- c("drink", "fly-active","fly-passive","handle","ingest","search","sit","stand","walk")

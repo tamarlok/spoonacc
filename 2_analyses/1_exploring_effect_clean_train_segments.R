@@ -2,10 +2,10 @@
 
 ### Run the model for different segment lengths
 seg.lengths <- c(0.2,0.4,0.6,1.0,1.5,2.0) # segment length in seconds
-sensitivity.all <- matrix(nrow=length(seg.lengths), ncol=length(behaviour.labels), dimnames=list(seg.lengths, behaviour.labels))
-precision.all <- matrix(nrow=length(seg.lengths),ncol=length(behaviour.labels), dimnames=list(seg.lengths, behaviour.labels))
-sensitivity.clean <- matrix(nrow=length(seg.lengths),ncol=length(behaviour.labels), dimnames=list(seg.lengths, behaviour.labels))
-precision.clean <- matrix(nrow=length(seg.lengths),ncol=length(behaviour.labels), dimnames=list(seg.lengths, behaviour.labels))
+sensitivity.all <- matrix(nrow=length(seg.lengths), ncol=length(behaviour.pooled), dimnames=list(seg.lengths, behaviour.pooled))
+precision.all <- matrix(nrow=length(seg.lengths),ncol=length(behaviour.pooled), dimnames=list(seg.lengths, behaviour.pooled))
+sensitivity.clean <- matrix(nrow=length(seg.lengths),ncol=length(behaviour.pooled), dimnames=list(seg.lengths, behaviour.pooled))
+precision.clean <- matrix(nrow=length(seg.lengths),ncol=length(behaviour.pooled), dimnames=list(seg.lengths, behaviour.pooled))
 
 for (i in 1:length(seg.lengths)) { 
   dfs <- create.fixed.segments(seg.lengths[i])
